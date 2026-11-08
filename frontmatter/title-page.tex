@@ -1,0 +1,68 @@
+% =====================================================================
+%  Title page (values come from info.tex)
+% =====================================================================
+\begin{titlepage}
+\newgeometry{top=1.8cm,bottom=1.8cm,left=2.2cm,right=2.2cm}
+\centering
+\setstretch{1.15}
+
+{\large\bfseries \republic\par}
+\vspace{2pt}
+{\normalsize \ministry\par}
+\vspace{0.6cm}
+
+\begin{minipage}[c]{0.22\textwidth}
+  \centering
+  \ifempty{\universitylogo}
+    \fbox{\parbox[c][2.4cm][c]{2.4cm}{\centering\scriptsize University\\logo}}
+  \else
+    \includegraphics[height=2.6cm]{\universitylogo}
+  \fi
+\end{minipage}%
+\begin{minipage}[c]{0.74\textwidth}
+  \centering
+  {\large\bfseries \university\par}
+  \vspace{3pt}
+  {\normalsize \faculty\par}
+  {\normalsize \department\par}
+\end{minipage}
+
+\vspace{1cm}
+{\large \degree\par}
+\vspace{4pt}
+{\normalsize Field: \textbf{\field} \quad Speciality: \textbf{\speciality}\par}
+
+\vspace{1cm}
+\begin{tcolorbox}[enhanced,colback=white,colframe=thprimary,
+    boxrule=1.4pt,arc=4pt,borderline={0.5pt}{3pt}{thprimary},
+    halign=center,top=14pt,bottom=14pt]
+  {\LARGE\bfseries\color{thprimary} \thesistitle\par}
+\end{tcolorbox}
+
+\vspace{1cm}
+\begin{minipage}[t]{0.47\textwidth}
+  \raggedright
+  {\bfseries Presented by:}\par
+  \studentA\par
+  \ifempty{\studentB}\else\studentB\par\fi
+\end{minipage}\hfill
+\begin{minipage}[t]{0.47\textwidth}
+  \raggedleft
+  {\bfseries Supervised by:}\par
+  \supervisor\par
+  \ifempty{\cosupervisor}\else{\bfseries Co-supervised by:}\par\cosupervisor\par\fi
+\end{minipage}
+
+\vspace{1.2cm}
+{\bfseries Defended before the jury composed of:}\par
+\vspace{6pt}
+\begin{tabular}{lll}
+  \juryPresident & & President \\
+  \juryExaminer  & & Examiner \\
+  \supervisor    & & Supervisor \\
+\end{tabular}
+
+\vfill
+{\large Academic year \academicyear\par}
+\restoregeometry
+\end{titlepage}

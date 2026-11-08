@@ -1,0 +1,661 @@
+% =====================================================================
+%  Chapter 4, Part 1: Conception
+%  Sources: docs/adr/0001-0008, docs/report/cowork-script.md section 7.
+% =====================================================================
+
+% =====================================================================
+\section{Introduction}
+\label{sec-d-intro}
+% =====================================================================
+
+This chapter presents the design of the framework whose contributions
+were described in \cref{chap-contribution}. The framework was built in
+short iterative sprints. Each sprint delivered a working part of the
+system (the grounded tutor, the adaptive loop, the context model, the
+teacher pages, the in-app reader, the Material Improvement agent), and
+each major decision was recorded in an \emph{architecture decision record}
+(ADR): a short document that states the context, the decision, the
+alternatives and the consequences~\cite{nygard2011adr}. Eight ADRs were
+written; they are the source of the design choices presented here.
+
+The chapter first analyses the requirements (\cref{sec-d-req}). It then
+presents the architecture (\cref{sec-d-arch}), the dynamic view of the
+main scenarios (\cref{sec-d-dynamic}), the static view of the domain
+(\cref{sec-d-static}), the design of the database (\cref{sec-d-db}) and
+the technology stack (\cref{sec-d-stack}).
+
+% =====================================================================
+\section{Requirements analysis}
+\label{sec-d-req}
+% =====================================================================
+
+\subsection{Actors}
+
+\Cref{tab-actors} lists the actors of the system. The two primary actors
+are the people who use the platform; the three secondary actors are
+systems that the platform depends on.
+
+\begin{table}[htbp]
+\centering
+\caption{Actors of the system}
+\label{tab-actors}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}L{2.0cm}Y@{}}
+\toprule
+\textbf{Actor} & \textbf{Type} & \textbf{Role} \\
+\midrule
+Student & primary & reads the course, asks the tutor, takes quizzes, follows the suggestions \\
+Teacher & primary & indexes the course, reviews generated questions, sets objectives, monitors the class, improves the material \\
+Moodle & secondary & provides courses, activities, files, enrolments, completion and grades (read-only) \\
+LLM provider & secondary & computes embeddings and writes answers, quiz items and material drafts (hosted or local) \\
+Scheduler & secondary & starts the periodic context sync (BullMQ repeatable job) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Functional requirements}
+
+\Cref{tab-fr} lists the functional requirements, numbered by actor:
+FR-S for the student, FR-T for the teacher and FR-Y for the system.
+
+\begin{table}[htbp]
+\centering
+\caption{Functional requirements}
+\label{tab-fr}
+\small
+\begin{tabularx}{\textwidth}{@{}L{1.4cm}Y@{}}
+\toprule
+\textbf{Id} & \textbf{Requirement} \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Student}} \\
+FR-S1 & Sign in. \\
+FR-S2 & See my courses and my progress. \\
+FR-S3 & Read the course activities inside the app (pages, PDFs) without a second login. \\
+FR-S4 & Ask the tutor and see its steps and its sources. \\
+FR-S5 & Get hints, not solutions, for exercises. \\
+FR-S6 & Take adaptive quizzes with immediate feedback. \\
+FR-S7 & See my mastery per section, my deadlines and my misconceptions. \\
+FR-S8 & Receive proactive suggestions with their reason, and dismiss them. \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Teacher}} \\
+FR-T1 & Index the course material. \\
+FR-T2 & Generate, review, edit, approve or reject quiz questions. \\
+FR-T3 & Choose the review mode of the course. \\
+FR-T4 & Set the target mastery and the key sections. \\
+FR-T5 & Monitor the class: mastery heatmap, risk flags, shared misconceptions. \\
+FR-T6 & Run the material analysis; accept, edit, reject or mark as applied each suggestion. \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{System}} \\
+FR-Y1 & Sync the context periodically. \\
+FR-Y2 & Record in-app reading. \\
+FR-Y3 & Trace every agent decision. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Non-functional requirements}
+
+The non-functional requirements follow from the contributions and from
+the context of an Algerian university.
+
+\begin{description}[leftmargin=1.5cm, labelwidth=1.3cm, labelsep=0.2cm, style=sameline, font=\normalfont\bfseries]
+  \item[NFR-1] \textbf{Moodle core untouched.} The integration uses only
+        web services; no plugin is required and nothing is written to
+        Moodle.
+  \item[NFR-2] \textbf{Privacy.} A single Moodle token, held by one
+        service; signed, short-lived file links; an option to run the
+        language model locally.
+  \item[NFR-3] \textbf{Traceability.} Every routing decision and agent
+        step is logged with a trace identifier.
+  \item[NFR-4] \textbf{Grounding.} Answers come only from the course
+        material, with citations, or the tutor says that the answer is not
+        in the course.
+  \item[NFR-5] \textbf{Responsiveness.} Answers are streamed; long tasks
+        (ingestion, quiz writing, material drafts) run in the background.
+  \item[NFR-6] \textbf{Testability.} LLMs are replaced by fake models in
+        the automated tests, so the tests never call an LLM.
+  \item[NFR-7] \textbf{Bilingual interface} (French and English).
+  \item[NFR-8] \textbf{Deployability.} The whole stack starts with Docker
+        Compose.
+\end{description}
+
+\subsection{Use cases}
+
+\Cref{fig-use-cases} shows the use case diagram. The student and the
+teacher each have five use cases. Asking the tutor always includes the
+retrieval of course passages, and taking an adaptive quiz always includes
+the update of the mastery. The Scheduler starts the context sync.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{use-cases}
+  \caption{Use case diagram.}
+  \label{fig-use-cases}
+\end{figure}
+
+\Crefrange{tab-uc-tutor}{tab-uc-material} describe the four main use
+cases.
+
+\newcommand{\ucrow}[2]{\textbf{#1} & #2 \\}
+\begin{table}[htbp]
+\centering
+\caption{Use case \emph{Ask the tutor}}
+\label{tab-uc-tutor}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}Y@{}}
+\toprule
+\ucrow{Actors}{Student (primary); LLM provider (secondary)}
+\ucrow{Pre-conditions}{The student is signed in and enrolled; the course is indexed.}
+\ucrow{Main scenario}{1. The student writes a question in the course chat.
+  2. The Orchestrator classifies it (intent, language, topic).
+  3. The Tutor retrieves the closest passages of the course.
+  4. The best similarity reaches the threshold; the Tutor adapts the level
+  to the mastery and context of the student.
+  5. The LLM writes the answer, streamed with the agent steps.
+  6. The citations are checked and shown with the answer.}
+\ucrow{Alternatives}{2a. Smalltalk: a short reply ends the turn.
+  2b. Quiz intent: the tutor proposes a quiz on the section.
+  4a. The best similarity is below the threshold: the tutor says that the
+  answer is not in the course and lists the closest sections.
+  4b. The question is an exercise: the tutor gives hints only.}
+\ucrow{Post-conditions}{The messages, steps, citations and a context snapshot are stored in one transaction; the turn is traced.}
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Use case \emph{Take an adaptive quiz}}
+\label{tab-uc-quiz}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}Y@{}}
+\toprule
+\ucrow{Actors}{Student (primary); LLM provider (secondary)}
+\ucrow{Pre-conditions}{The student is enrolled; the section has ingested material.}
+\ucrow{Main scenario}{1. The student starts a quiz on a section.
+  2. The Assessment agent fills the quiz from approved bank questions that
+  the student has never answered.
+  3. The quiz is ready; items are shown without their keys.
+  4. For each answer, the system grades it in code, updates the mastery
+  (BKT) and records the misconception of a wrong option.
+  5. The student sees the feedback, the explanation and the mastery before
+  and after.
+  6. The Recommendation agent proposes the next section with its reason.}
+\ucrow{Alternatives}{2a. Shortfall in \texttt{auto\_publish} mode: the LLM writes the missing items, they are validated in code and used.
+  2b. Shortfall in \texttt{review} mode: the missing items are written as pending; the quiz is served if enough questions are approved, otherwise it ends with \texttt{awaiting\_review}.
+  2c. The LLM fails or times out: the quiz ends as \texttt{failed} with a code that the interface explains.}
+\ucrow{Post-conditions}{Responses and the new learner state are committed together; the mastery changes are traced.}
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Use case \emph{Review the question bank}}
+\label{tab-uc-bank}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}Y@{}}
+\toprule
+\ucrow{Actors}{Teacher (primary); LLM provider (secondary)}
+\ucrow{Pre-conditions}{The teacher is signed in and teaches the course.}
+\ucrow{Main scenario}{1. The teacher opens the question bank of a section.
+  2. The system lists the questions with their status and their use (answers, share correct).
+  3. The teacher approves, edits or rejects each pending question.
+  4. Each edit goes through the same checks as an LLM draft.}
+\ucrow{Alternatives}{1a. The teacher generates new questions for a section; they enter the bank as pending.
+  4a. An edit fails a check (for example two identical options): it is refused with the reason.}
+\ucrow{Post-conditions}{Approved questions can be served in quizzes; every review is traced with what changed.}
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Use case \emph{Analyse the course material}}
+\label{tab-uc-material}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}Y@{}}
+\toprule
+\ucrow{Actors}{Teacher (primary); LLM provider (secondary)}
+\ucrow{Pre-conditions}{The course has assessed learners.}
+\ucrow{Main scenario}{1. The teacher starts the analysis.
+  2. The Material Improvement agent loads the evidence and runs the five detectors.
+  3. New issues are recorded and the request returns at once.
+  4. In the background, the LLM writes a diagnosis and a draft for each issue; quotes are checked.
+  5. The teacher reviews each suggestion: accept (possibly after editing), or reject.
+  6. After changing the material in Moodle, the teacher marks the suggestion as applied.}
+\ucrow{Alternatives}{2a. No detector fires (for example a small class): no suggestion is created.
+  4a. A draft fails: the other drafts continue.}
+\ucrow{Post-conditions}{Suggestions and reviews are stored and traced; nothing is written to Moodle.}
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =====================================================================
+\section{Architecture}
+\label{sec-d-arch}
+% =====================================================================
+
+\subsection{Global layered architecture}
+
+\Cref{fig-architecture} presents the architecture in five layers. The
+\emph{presentation} layer is a React single-page application with four
+areas: the course reader, the tutor chat with its live agent steps, the
+adaptive quizzes, and the teacher pages. The \emph{gateway} is a NestJS
+API that handles authentication, the course reader, the chat sessions,
+the quizzes and the teacher routes; it also contains the only Moodle
+client. The \emph{agents} layer is a Python service (FastAPI and
+LangGraph) that holds every agent, the \texttt{StateStore}, the tracer
+and a worker for background jobs. The \emph{data} layer is PostgreSQL with
+pgvector, for application data, the learner state, the embeddings and the
+traces, and Redis for the job queues. The \emph{external services} are
+Moodle, the chat LLM (hosted or local) and the embedding model.
+
+\begin{sidewaysfigure}
+  \centering
+  \reportfigwide{architecture}
+  \caption{Layered architecture of the framework.}
+  \label{fig-architecture}
+\end{sidewaysfigure}
+
+The gateway sits between the web app and the agents for two reasons.
+First, it is the \emph{only} Moodle client: the agents obtain Moodle data
+through internal API endpoints, so the Moodle token and the other secrets
+stay in one place. The price is one extra hop (agents, then API, then
+Moodle). Second, it is the place for authentication, sessions and the
+course reader, which are not agent logic. Conversely, all LLM logic lives
+in the Python agents: ingestion, retrieval and the agent graphs. LLM and
+embedding access sit behind one provider interface, switched by
+environment variables. Long jobs go through BullMQ: the API produces jobs
+and a Python worker consumes them.
+
+\subsection{Deployment view}
+
+\Cref{fig-deployment} shows the deployment. All services run as
+containers of one Docker Compose project on a single host: the web app
+(nginx, port 5173), the API (Node, port 3001), the agents (uvicorn, port
+8000) and their worker, Moodle (Apache and PHP, port 8080) with its own
+PostgreSQL database, the application database (PostgreSQL with pgvector,
+port 5432), Redis (port 6379), and a one-shot \texttt{migrate} container
+that applies the schema with dbmate. The local models run in Ollama on
+the host machine (port 11434), and the hosted models are reached through
+the Groq API.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{deployment}
+  \caption{Deployment view (Docker Compose).}
+  \label{fig-deployment}
+\end{figure}
+
+\subsection{Multi-agent architecture}
+
+\Cref{fig-multi-agent} (\cref{chap-contribution}) showed the agents
+around the shared state; \cref{tab-agents-roster} gave their roles and
+the part played by the LLM. \Cref{tab-agents-io} completes this view
+with the inputs and outputs of each agent. Two rules hold for all of
+them: every read and write of the learner state goes through the
+\texttt{StateStore} with optimistic concurrency, and every decision is
+recorded by the tracer in \texttt{agent\_event}.
+
+\begin{table}[htbp]
+\centering
+\caption{Inputs and outputs of the agents}
+\label{tab-agents-io}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{2.5cm}YY@{}}
+\toprule
+\textbf{Agent} & \textbf{Inputs} & \textbf{Outputs} \\
+\midrule
+Orchestrator & message, language & intent (concept, exercise, quiz, course\_info, smalltalk, off\_topic) and route \\
+Tutor & question, passages, mastery, context & grounded answer with numbered citations, or refusal \\
+Assessment & section, learner language, question bank & quiz of 5 items (bank first) \\
+Diagnosis & each graded answer & updated mastery $P(L)$, misconceptions \\
+Recommendation & mastery, context, objectives & ranked sections, each with a reason \\
+Context & Moodle sources, in-app views & course and learner context, interventions \\
+Learning Analytics & all learner states of the course & per-section and per-student view, risk flags \\
+Material Improvement & answers, unanswered turns, reading, mastery, views & suggestions with evidence and drafts \\
+Ingestion (worker) & Moodle contents and files & chunks and embeddings \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Main design decisions}
+
+\Cref{tab-adr} summarises the eight architecture decision records, with
+the alternatives considered and the reason for each choice.
+
+\begin{table}[htbp]
+\centering
+\caption{Summary of the architecture decision records}
+\label{tab-adr}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{0.9cm}YL{3.2cm}L{3.3cm}@{}}
+\toprule
+\textbf{ADR} & \textbf{Decision} & \textbf{Alternatives} & \textbf{Reason} \\
+\midrule
+0001 & Layered architecture; Moodle as backend only; NestJS is the only Moodle client; Python agents hold all LLM logic; BullMQ for long jobs & agents calling Moodle directly; a Moodle plugin & one place for the Moodle token and secrets; core untouched \\
+0002 & One shared, versioned learner state in PostgreSQL, written through the StateStore with optimistic concurrency; a snapshot per turn; \texttt{agent\_event} trace & private agent memories & consistency between agents, auditability \\
+0003 & Adaptive loop with BKT per section; quizzes validated in code; recommendation rules & IRT, DKT, reinforcement learning & interpretable, works with few answers, defensible \\
+0004 & Explicit context model, Context agent and rule-based interventions, polling Moodle web services & a Moodle event plugin; LLM-decided triggers & no core change; explainable triggers \\
+0005 & Teacher in the loop: question bank with review, objectives, class dashboard & auto-publish only & a measured faithfulness of about 0.5 requires human review \\
+0006 & In-app course reader; signed file links (HMAC, 1\,h); in-app views recorded, never written to Moodle & links to Moodle; writing completion back & one interface, no double login; Moodle stays read-only \\
+0007 & Material Improvement: code detects (statistics), the LLM drafts, the teacher validates; on demand & LLM-only critique; scheduled runs & explainable, measurable, quota-friendly \\
+0008 & Agent steps in the chat from the graph's own spans, never model reasoning; course-centred interface & showing the LLM's chain of thought & transparency without leaking solutions \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =====================================================================
+\section{Dynamic view}
+\label{sec-d-dynamic}
+% =====================================================================
+
+This section describes the behaviour of the system in its four main
+scenarios with sequence diagrams, then the ingestion of a course with an
+activity diagram, and the life cycle of three objects with state
+machines.
+
+\subsection{A tutor turn}
+
+\Cref{fig-seq-tutor} shows a tutor turn. The student's question reaches
+the API, which forwards it to the agents and proxies their stream back to
+the web app. The agents first load the learner state and its version
+from the \texttt{StateStore}. The Orchestrator classifies the question,
+and its step is streamed to the chat at once. The Tutor retrieves the
+closest passages and streams a second step. If the best similarity
+reaches the threshold, the Tutor adapts the level to the learner's
+mastery and context, asks the LLM to write the answer, streams the tokens
+as they arrive, and checks the citations; otherwise it streams a
+\texttt{not\_found} step with the closest sections. In both cases,
+\texttt{commit\_turn} writes the messages, the steps and the new context
+snapshot in one transaction, and the final events (citations, end of the
+turn) close the stream.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{seq-tutor}
+  \caption{Sequence of a tutor turn with streamed agent steps.}
+  \label{fig-seq-tutor}
+\end{figure}
+
+\subsection{An adaptive quiz}
+
+\Cref{fig-seq-quiz} shows an adaptive quiz. The quiz is created at once
+in the state \emph{generating} and returned to the web app, which polls
+it; the work continues in the background. The Assessment agent first takes
+approved bank questions that the learner has never answered. If some are
+missing, the review mode decides: in \texttt{auto\_publish} mode the LLM
+writes the missing items, which are validated in code and inserted as
+approved; in \texttt{review} mode they are inserted as pending, and the
+quiz is served only if at least $n-2$ questions are approved, otherwise it
+ends with \texttt{awaiting\_review}. For each answer, the grading is done
+in code, and the BKT update is committed atomically with the response;
+the reply carries the mastery before and after. Finally, the
+Recommendation agent ranks the sections and gives the reason of each.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{seq-quiz}
+  \caption{Sequence of an adaptive quiz.}
+  \label{fig-seq-quiz}
+\end{figure}
+
+\subsection{A context sync and proactive interventions}
+
+\Cref{fig-seq-context} shows a context sync. It starts in one of two
+ways: the repeatable job of the scheduler, every 10 minutes, or a learner
+who opens a course, which enqueues a sync at most once a minute. The
+worker consumes the job and asks the API for the context sources of the
+course; the API reads them from Moodle and adds the in-app views. The
+Context agent builds and commits the course context, then, for each
+enrolled learner, builds the learner context, commits it with a version
+check, evaluates the four triggers and inserts the new interventions,
+using their de-duplication key. Later, the student's feed shows each
+suggestion with its reason.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{seq-context}
+  \caption{Sequence of a context sync and proactive interventions.}
+  \label{fig-seq-context}
+\end{figure}
+
+\subsection{A material analysis}
+
+\Cref{fig-seq-material} shows a material analysis. The teacher's request
+reaches the Material service in the agents. The service loads the
+evidence, embeds the unanswered questions to group them, runs the five
+detectors and records the issues with their stable keys; the request then
+returns with the status \texttt{202} (accepted). The drafts are written
+in the background, one after the other: for each new issue the LLM writes
+a diagnosis and a draft, the quote is checked, and the suggestion is saved
+as pending. The web app polls until the drafts are ready. The teacher then
+accepts, edits or rejects each suggestion, and marks it as applied after
+changing the material in Moodle; each change is traced.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{seq-material}
+  \caption{Sequence of a material analysis.}
+  \label{fig-seq-material}
+\end{figure}
+
+\subsection{Course ingestion}
+
+\Cref{fig-ingestion} shows the ingestion of a course as an activity
+diagram with two swimlanes. The teacher starts the indexing, and the API
+enqueues a job. The worker fetches the course contents through an
+internal API endpoint and processes each activity: it downloads the
+content and skips it if its hash has not changed; otherwise it extracts
+the text (HTML or PDF), detects its language, cuts it into chunks,
+computes the embeddings with bge-m3, and upserts the document and its
+chunks, with their vectors and their full-text index. When every activity
+is processed, the documents of activities removed from the course are
+deleted, and the job ends with its statistics. Because unchanged content
+is skipped and documents are upserted, a new ingestion of the same course
+is idempotent.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{ingestion-activity}
+  \caption{Course ingestion pipeline.}
+  \label{fig-ingestion}
+\end{figure}
+
+\subsection{State machines}
+
+\Cref{fig-states} gives the life cycles of three objects. A \emph{quiz}
+is generating, then ready, then completed when all its items are
+answered; it fails with a code when the LLM fails, times out or when the
+quiz waits for a teacher review. A \emph{bank question} generated in
+\texttt{review} mode is pending until the teacher approves or rejects it;
+in \texttt{auto\_publish} mode it is approved at once, and an edit sends
+it back to review. A \emph{material suggestion} is pending, then accepted
+or rejected, and an accepted suggestion becomes applied; each of these
+transitions can be undone.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{states}
+  \caption{State machines of quizzes, questions and material suggestions.}
+  \label{fig-states}
+\end{figure}
+
+% =====================================================================
+\section{Static view}
+\label{sec-d-static}
+% =====================================================================
+
+\Cref{fig-class-diagram} presents the domain classes, grouped into six
+packages.
+
+\begin{sidewaysfigure}
+  \centering
+  \reportfigwide{class-diagram}
+  \caption{Domain class diagram.}
+  \label{fig-class-diagram}
+\end{sidewaysfigure}
+
+\begin{description}[style=nextline, leftmargin=0.6cm]
+  \item[Identity] \texttt{User} and \texttt{Course} mirror the Moodle user
+    and course, with their Moodle identifiers; \texttt{Enrolment} holds
+    the role of a user in a course and the last access recorded by the
+    app.
+  \item[Learner state] \texttt{LearnerCourseState} is the shared learner
+    state of one learner in one course, with its \texttt{version}. It
+    maps each topic to a \texttt{TopicMastery} (the probability
+    \texttt{p\_known} and the number of attempts), and contains the
+    misconceptions, the interaction statistics and the
+    \texttt{LearnerContext}.
+  \item[Context] \texttt{CourseContext} holds the deadlines and the
+    prerequisite graph of a course, with its own version.
+    \texttt{Intervention} is a proactive suggestion for a learner in a
+    course, with its trigger, reason, action, de-duplication key and
+    status. \texttt{ActivityView} records the views and reading time of an
+    activity in the app, which feed the learner context.
+  \item[Assessment] A \texttt{Quiz} on one topic contains
+    \texttt{QuizItem}s; each item may be a copy of a bank
+    \texttt{Question}. A \texttt{QuizResponse} records the chosen option,
+    whether it was correct, and the mastery before and after.
+  \item[Teaching] The \texttt{CoursePolicy} of a course holds its review
+    mode and its objectives. A \texttt{MaterialSuggestion} holds a
+    proposed change with its evidence, diagnosis, draft and status.
+  \item[Chat and tracing] A \texttt{LearningSession} contains
+    \texttt{Message}s; an assistant message keeps its citations, intent,
+    trace identifier and its \texttt{AgentStep}s.
+\end{description}
+The \guillemotleft service\guillemotright{} \texttt{StateStore} is the only
+way for the agents to load and commit a learner state or a course
+context; its \texttt{commit\_turn} operation applies the optimistic
+concurrency described in \cref{sec-c1}.
+
+% =====================================================================
+\section{Database design}
+\label{sec-d-db}
+% =====================================================================
+
+\Cref{fig-database} shows the relational schema, and \cref{tab-db-tables}
+describes the role of each table. The schema is owned by SQL migrations
+applied by one tool, dbmate. The API reads it through types generated for
+Kysely, and the agents through Pydantic models that mirror the tables.
+
+\begin{sidewaysfigure}
+  \centering
+  \reportfigwide{database}
+  \caption{Relational schema of the database.}
+  \label{fig-database}
+\end{sidewaysfigure}
+
+\begin{table}[htbp]
+\centering
+\caption{Tables of the database}
+\label{tab-db-tables}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{2.0cm}L{3.4cm}YL{3.6cm}@{}}
+\toprule
+\textbf{Domain} & \textbf{Table} & \textbf{Role} & \textbf{Key columns} \\
+\midrule
+Identity & \texttt{app\_user} & mirror of a Moodle user & moodle\_user\_id, role, locale \\
+ & \texttt{course} & mirror of a Moodle course & moodle\_course\_id, shortname \\
+ & \texttt{enrolment} & role of a user in a course & role, last\_access\_at \\
+Content / RAG & \texttt{ingestion\_job} & one indexing job & status, stats \\
+ & \texttt{course\_document} & one ingested source (activity or file) & moodle\_cmid, section\_num, lang, content\_hash \\
+ & \texttt{course\_chunk} & a chunk with its vector and full-text index & embedding vector(1024), tsv \\
+Learner state & \texttt{learner\_profile} & cross-course learner facts & preferred language, version \\
+ & \texttt{learner\_course\_state} & the shared learner state & mastery, misconceptions, interaction\_stats, context (jsonb), version \\
+ & \texttt{activity\_view} & views and reading time in the app & cmid, views, seconds \\
+Chat \& tracing & \texttt{learning\_session} & a conversation & user, course \\
+ & \texttt{message} & a message, with citations and steps & content, citations, intent, steps, trace\_id \\
+ & \texttt{context\_snapshot} & the state seen and produced at each turn & state (jsonb), version \\
+ & \texttt{agent\_event} & audit log of decisions and steps & trace\_id, agent, kind, payload, latency\_ms \\
+Assessment & \texttt{quiz} & a quiz on one topic & topic\_key, lang, status \\
+ & \texttt{quiz\_item} & an item, possibly copied from the bank & stem, options, answer\_index, question\_id \\
+ & \texttt{quiz\_response} & an answer and its BKT effect & chosen\_index, correct, p\_known\_before, p\_known\_after \\
+Context & \texttt{course\_context} & the course context & context (jsonb), version \\
+ & \texttt{intervention} & a proactive suggestion & trigger, dedupe\_key, reason, action, status \\
+Teacher & \texttt{question} & a reviewed bank question & status, options, answer\_index, reviewer \\
+ & \texttt{course\_policy} & review mode and objectives & review\_mode, objectives (jsonb), version \\
+ & \texttt{material\_suggestion} & a proposed change to the material & kind, evidence, diagnosis, draft, status \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Three choices shape this design:
+\begin{itemize}
+  \item \emph{One database for everything.} PostgreSQL with the pgvector
+        extension holds the relational data, the learner state as
+        \texttt{jsonb} and the vectors of the course chunks. Retrieval can
+        therefore combine vector search and full-text search in one query
+        engine, and there is no second store to keep consistent.
+  \item \emph{\texttt{jsonb} plus a version column for shared state.} The
+        parts of the learner state, the course context and the course
+        policy are \texttt{jsonb} documents, so they can evolve without a
+        migration, and each row carries a \texttt{version} that implements
+        the optimistic concurrency of the \texttt{StateStore}.
+  \item \emph{Migrations owned by one tool.} The schema is defined by SQL
+        migrations applied by dbmate in a one-shot container, and both the
+        API and the agents derive their types from it.
+\end{itemize}
+
+% =====================================================================
+\section{Technology stack}
+\label{sec-d-stack}
+% =====================================================================
+
+\Cref{fig-stack} summarises the technologies by layer, and
+\cref{tab-stack} gives their pinned versions and the reason for each
+choice.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{stack}
+  \caption{Technology stack.}
+  \label{fig-stack}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Technology stack, versions and reasons}
+\label{tab-stack}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{1.8cm}L{3.6cm}L{1.8cm}Y@{}}
+\toprule
+\textbf{Layer} & \textbf{Technology} & \textbf{Version} & \textbf{Why} \\
+\midrule
+Presentation & React, TypeScript, Vite & 19.3, 6.0, 8 & own interface, independent of Moodle's theme \\
+ & Tailwind CSS, shadcn/ui & 4.3, -- & customisable, modern components \\
+ & TanStack Query & 5 & server state and polling (quizzes, drafts) \\
+ & react-i18next & -- & French and English interface \\
+Gateway & NestJS (Node $\geq$ 22) & 12.3 & structured backend for auth, sessions and the Moodle client \\
+ & Kysely, zod & -- & typed SQL from the schema; validation of requests \\
+ & BullMQ (producer), JWT & 6.5, -- & background jobs; authentication \\
+Agents & Python (uv), FastAPI & 3.12, 0.162 & Python ecosystem for LLMs, retrieval and evaluation \\
+ & LangGraph, LangChain & 1.2, 1.4 & explicit agent graphs with conditional edges and custom streams \\
+ & pydantic, psycopg & --, 3 & models of the shared state; PostgreSQL access \\
+ & bullmq (consumer) & 3.4 & consumes the jobs produced by the API \\
+ & Ragas & 0.4 & evaluation of faithfulness \\
+LLMs & Groq: \texttt{qwen/qwen3.8-27b} (tutor, router), \texttt{openai/gpt-oss-20b} (quiz and material writer) & -- & hosted models for quality and speed \\
+ & Ollama: \texttt{qwen3:4b-instruct}, \texttt{bge-m3} (1024 dimensions) & -- & local option for privacy; multilingual embeddings \\
+Data & PostgreSQL + pgvector & 16 & one database for relational data, JSONB state and vectors \\
+ & Redis & 7 & BullMQ queues \\
+LMS & Moodle LTS, image \texttt{moodlehq/} \texttt{moodle-php-apache} 8.3 & 4.5.15 & long-term support; core never modified \\
+Infrastructure & Docker Compose, dbmate, \texttt{just} & -- & reproducible stack, one migration tool, task runner \\
+Quality & Vitest, msw, pytest, ESLint, Prettier, ruff, mypy & -- & tests (LLMs and Moodle replaced by fakes) and static checks \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =====================================================================
+\section{Conclusion}
+\label{sec-d-conclusion}
+% =====================================================================
+
+This first part of the chapter has specified what the platform must do
+and how it is built: the requirements and use cases, the layered
+architecture with its gateway and its agents around one shared state, the
+behaviour of the main scenarios, the domain model, the database and the
+technology stack. Each choice is traced back to an architecture decision
+record. The second part of the chapter presents the development of the
+platform: its implementation, its interfaces and the tests that support
+the results reported in \cref{chap-contribution}.

@@ -1,0 +1,56 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}[
+  ag/.style={agent, font=\scriptsize, minimum width=30mm, minimum height=10mm, align=center},
+  wlbl/.style={font=\scriptsize, fill=pAgentL!40, inner sep=1.2pt, align=center, text=pInk},
+  rd/.style={->, thick, draw=pData}]
+  % ---------------------------------------------------------------- shared state
+  \node[store, minimum width=44mm, minimum height=24mm, fill=pAgent!10, draw=pAgent, font=\scriptsize]
+    (st) at (0,0)
+    {\textbf{\small Shared learner +}\\\textbf{\small context state}\\[1mm]
+     StateStore $\cdot$ versioned\\(optimistic concurrency)\\[1mm]
+     mastery $\cdot$ misconceptions\\interaction stats $\cdot$ context};
+  % ---------------------------------------------------------------- agents around
+  \node[ag] (tut)  at (-5.4, 3.6) {\textbf{Tutor}\\grounded answers (RAG)};
+  \node[ag] (orch) at ( 0.0, 3.6) {\textbf{Orchestrator}\\classify, route};
+  \node[ag] (ass)  at ( 5.4, 3.6) {\textbf{Assessment}\\bank-first quizzes};
+  \node[ag] (dia)  at ( 6.2, 0.0) {\textbf{Diagnosis}\\BKT update};
+  \node[ag] (rec)  at ( 5.4,-3.6) {\textbf{Recommendation}\\next sections + reason};
+  \node[ag] (ctx)  at ( 0.0,-3.6) {\textbf{Context}\\context model, triggers};
+  \node[ag] (la)   at (-5.4,-3.6) {\textbf{Learning Analytics}\\class view, risk flags};
+  \node[ag] (mi)   at (-6.2, 0.0) {\textbf{Material Improvement}\\5 detectors + writer};
+  \node[ag, dashed] (ing) at (-1.6, 5.9) {\textbf{Ingestion} (worker)\\chunks + embeddings};
+  \node[data, font=\scriptsize, minimum width=30mm, minimum height=10mm] (vec) at (-5.4, 5.9)
+    {\textbf{course\_chunk}\\pgvector + full-text};
+  \begin{scope}[on background layer]
+    \node[layer={pAgent}{Agents (apps/agents)}, fit=(tut)(ass)(dia)(rec)(la)(mi)(ing),
+      inner xsep=9pt, inner ysep=13pt] (L) {};
+  \end{scope}
+  \node[data, font=\scriptsize, minimum width=30mm, minimum height=10mm, fill=pOkL, draw=pOk]
+    (tr) at (5.4, 8.0) {\textbf{Tracer}\\\texttt{agent\_event} (trace\_id)};
+  % ---------------------------------------------------------------- control flow
+  \draw[call] (orch) -- node[wlbl, above] {concept, exercise} (tut);
+  \draw[call] (orch) -- node[wlbl, above] {quiz intent} (ass);
+  \draw[call] (ass) -- node[wlbl] {graded answer} (dia);
+  \draw[call] (ing) -- node[wlbl, above] {write} (vec);
+  \draw[call] (vec) -- node[wlbl] {passages} (tut);
+  % ---------------------------------------------------------------- shared state reads / writes
+  \draw[rd] (st.north west) -- node[wlbl, pos=0.5] {reads mastery,\\context} (tut.south east);
+  \draw[rd] (st.north) -- node[wlbl, pos=0.45] {reads language} (orch.south);
+  \draw[rd] (st.north east) -- node[wlbl, pos=0.5] {reads mastery,\\answered items} (ass.south west);
+  \draw[rd] (dia.west) -- node[wlbl] {writes mastery,\\misconceptions} (st.east);
+  \draw[rd] (ctx.north) -- node[wlbl, pos=0.4] {writes context,\\interventions} (st.south);
+  \draw[rd] (st.south east) -- node[wlbl, pos=0.55] {reads mastery,\\context, objectives} (rec.north west);
+  \draw[rd] (st.south west) -- node[wlbl, pos=0.55] {reads all\\learner states} (la.north east);
+  \draw[rd] (st.west) -- node[wlbl] {reads answers,\\reading, mastery} (mi.east);
+  % ---------------------------------------------------------------- tracing
+  \draw[densely dotted, pOk, very thick, ->] (tr.south |- L.north) -- node[wlbl, left=2pt, fill=white]
+    {every routing decision\\and agent step} (tr.south);
+  % legend
+  \node[note, anchor=north west] at ([yshift=-2mm]L.south west)
+    {\tikz[baseline=-0.5ex]\draw[call] (0,0) -- (0.5,0); control flow \quad
+     \tikz[baseline=-0.5ex]\draw[rd] (0,0) -- (0.5,0); read / write of the shared state (through StateStore) \quad
+     \tikz[baseline=-0.5ex]\draw[densely dotted, pOk, very thick, ->] (0,0) -- (0.5,0); trace};
+\end{tikzpicture}
+\end{document}

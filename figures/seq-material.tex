@@ -1,0 +1,51 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}
+\node[web, lifehead, minimum width=21mm, align=center] (h-te) at (0.00,0) {Teacher};
+\node[web, lifehead, minimum width=21mm, align=center] (h-web) at (2.35,0) {Web app};
+\node[api, lifehead, minimum width=21mm, align=center] (h-api) at (4.70,0) {API};
+\node[agent, lifehead, minimum width=21mm, align=center] (h-ms) at (7.05,0) {Material\\[-1pt]service};
+\node[data, lifehead, minimum width=21mm, align=center] (h-db) at (9.40,0) {StateStore\\[-1pt]/ DB};
+\node[ai, lifehead, minimum width=21mm, align=center] (h-em) at (11.75,0) {Embedder\\[-1pt](bge-m3)};
+\node[ai, lifehead, minimum width=21mm, align=center] (h-llm) at (14.10,0) {LLM};
+\draw[life] (h-te.south) -- (0.00,-16.61);
+\draw[life] (h-web.south) -- (2.35,-16.61);
+\draw[life] (h-api.south) -- (4.70,-16.61);
+\draw[life] (h-ms.south) -- (7.05,-16.61);
+\draw[life] (h-db.south) -- (9.40,-16.61);
+\draw[life] (h-em.south) -- (11.75,-16.61);
+\draw[life] (h-llm.south) -- (14.10,-16.61);
+\node[activation, minimum height=8.00cm, anchor=north] at (7.05,-2.66) {};
+\draw[msg] (0.00,-0.95) -- node[mlbl, above=0.5pt] {Analyse} (2.35,-0.95);
+\draw[msg] (2.35,-1.57) -- node[mlbl, above=0.5pt] {POST \texttt{/material/analyse}} (4.70,-1.57);
+\draw[msg] (4.70,-2.19) -- node[mlbl, above=0.5pt] {analyse (course)} (7.05,-2.19);
+\draw[msg] (7.16,-2.81) -- node[mlbl, above=0.5pt] {load evidence} (9.40,-2.81);
+\draw[reply] (9.40,-3.43) -- node[mlbl, above=0.5pt] {answers, turns, reading} (7.16,-3.43);
+\draw[msg] (7.16,-4.05) -- node[mlbl, above=0.5pt] {unanswered questions} (11.75,-4.05);
+\draw[reply] (11.75,-4.67) -- node[mlbl, above=0.5pt] {vectors} (7.16,-4.67);
+\draw[msg] (7.16,-5.17) -- ++(0.45,0) -- ++(0,-0.32) -- (7.16,-5.49);
+\node[mlbl, anchor=west, fill=none, align=left] at (7.66,-5.33) {5 detectors (code)};
+\draw[msg] (7.16,-6.03) -- node[mlbl, above=0.5pt] {record issues (stable key)} (9.40,-6.03);
+\draw[reply] (6.94,-6.65) -- node[mlbl, above=0.5pt] {\texttt{202} accepted} (2.35,-6.65);
+\node[font=\scriptsize\itshape, anchor=north west, fill=white, inner sep=1pt] at (4.40,-7.42) {[each new issue, in the background]};
+\draw[msg] (7.16,-8.17) -- node[mlbl, above=0.5pt] {diagnosis + draft} (14.10,-8.17);
+\draw[reply] (14.10,-8.79) -- node[mlbl, above=0.5pt] {structured output} (7.16,-8.79);
+\draw[msg] (7.16,-9.29) -- ++(0.45,0) -- ++(0,-0.32) -- (7.16,-9.61);
+\node[mlbl, anchor=west, fill=none, align=left] at (7.66,-9.45) {check the quote};
+\draw[msg] (7.16,-10.15) -- node[mlbl, above=0.5pt] {save \texttt{pending}} (9.40,-10.15);
+\draw[frag] (3.65,-7.39) rectangle (15.15,-10.62);
+\node[fraglbl] at (3.65,-7.39) {loop};
+\node[font=\scriptsize\itshape, anchor=north west, fill=white, inner sep=1pt] at (2.05,-11.12) {[until drafted]};
+\draw[msg] (2.35,-11.87) -- node[mlbl, above=0.5pt] {poll suggestions} (4.70,-11.87);
+\draw[msg] (4.70,-12.49) -- node[mlbl, above=0.5pt] {read} (9.40,-12.49);
+\draw[reply] (9.40,-13.11) -- node[mlbl, above=0.5pt] {suggestions + evidence} (2.35,-13.11);
+\draw[frag] (1.30,-11.09) rectangle (10.45,-13.58);
+\node[fraglbl] at (1.30,-11.09) {loop};
+\draw[msg] (0.00,-13.93) -- node[mlbl, above=0.5pt] {accept / edit / reject} (2.35,-13.93);
+\draw[msg] (2.35,-14.55) -- node[mlbl, above=0.5pt] {PATCH status} (4.70,-14.55);
+\draw[msg] (4.70,-15.17) -- node[mlbl, above=0.5pt] {update (traced)} (9.40,-15.17);
+\draw[msg] (0.00,-15.79) -- node[mlbl, above=0.5pt] {mark \texttt{applied}} (2.35,-15.79);
+\node[note, text=pInk, anchor=north west] at (-1.00,-16.86) {\tikz[baseline=-0.5ex]\draw[msg] (0,0) -- (0.5,0); call \quad \tikz[baseline=-0.5ex]\draw[reply] (0,0) -- (0.5,0); reply \quad };
+\end{tikzpicture}
+\end{document}

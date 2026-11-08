@@ -1,0 +1,100 @@
+% Shared style of the report figures (PFE: context-aware multi-agent framework on Moodle).
+% Every figure is a standalone document: \documentclass[tikz,border=4pt]{standalone}
+% then \input{pfe-style}. Plain TikZ libraries only, so any TeX Live distribution compiles it.
+\usepackage[T1]{fontenc}
+\usepackage{lmodern} % Latin Modern Sans: present in every TeX distribution
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{amsmath}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,shapes.multipart,shapes.misc,
+  fit,backgrounds,calc,matrix}
+
+% ------------------------------------------------------------------ palette
+% One colour per architectural role (light fill + strong stroke); purple is the project identity.
+\definecolor{pInk}{HTML}{1E293B}
+\definecolor{pMuted}{HTML}{64748B}
+\definecolor{pLine}{HTML}{CBD5E1}
+\definecolor{pWeb}{HTML}{2563EB}      \definecolor{pWebL}{HTML}{EFF6FF}
+\definecolor{pApi}{HTML}{0F766E}      \definecolor{pApiL}{HTML}{F0FDFA}
+\definecolor{pAgent}{HTML}{7C3AED}    \definecolor{pAgentL}{HTML}{F5F3FF}
+\definecolor{pData}{HTML}{475569}     \definecolor{pDataL}{HTML}{F8FAFC}
+\definecolor{pLms}{HTML}{C2410C}      \definecolor{pLmsL}{HTML}{FFF7ED}
+\definecolor{pAi}{HTML}{BE185D}       \definecolor{pAiL}{HTML}{FDF2F8}
+\definecolor{pOk}{HTML}{15803D}       \definecolor{pOkL}{HTML}{F0FDF4}
+\definecolor{pWarn}{HTML}{B45309}     \definecolor{pWarnL}{HTML}{FFFBEB}
+
+\tikzset{
+  >={Stealth[length=2.2mm,width=1.6mm]},
+  every node/.style={text=pInk},
+  % -------------------------------------------------------------- boxes
+  comp/.style={rectangle, rounded corners=3pt, thick, align=center, font=\small,
+    inner xsep=6pt, inner ysep=4pt, minimum height=8mm},
+  web/.style={comp, draw=pWeb, fill=pWebL},
+  api/.style={comp, draw=pApi, fill=pApiL},
+  agent/.style={comp, draw=pAgent, fill=pAgentL},
+  data/.style={comp, draw=pData, fill=pDataL},
+  lms/.style={comp, draw=pLms, fill=pLmsL},
+  ai/.style={comp, draw=pAi, fill=pAiL},
+  store/.style={cylinder, shape border rotate=90, aspect=0.18, draw=pData, thick,
+    fill=pDataL, align=center, font=\small, minimum width=22mm, minimum height=13mm},
+  note/.style={rectangle, draw=pLine, fill=white, rounded corners=2pt, font=\scriptsize,
+    align=left, text=pMuted, inner sep=3pt},
+  tag/.style={rectangle, rounded corners=6pt, fill=#1, text=white, font=\scriptsize\bfseries,
+    inner xsep=4pt, inner ysep=1.5pt},
+  % A titled frame drawn behind a group of nodes: layer={<colour>}{<title>}
+  % The title sits inside the frame, top left; fit the frame with inner ysep >= 12pt.
+  layer/.style 2 args={draw=#1, fill=#1!4, rounded corners=6pt, thick, dashed,
+    inner xsep=8pt, inner ysep=12pt,
+    label={[anchor=north west, font=\footnotesize\bfseries, text=#1, inner sep=2pt,
+      xshift=3pt, yshift=-2pt]north west:#2}},
+  % -------------------------------------------------------------- arrows
+  % call: synchronous request · async: queued job · rw: read/write data · stream: SSE/tokens
+  call/.style={->, thick, draw=pInk},
+  async/.style={->, thick, draw=pInk, dashed},
+  rw/.style={<->, thick, draw=pData},
+  stream/.style={->, very thick, draw=pAgent, densely dotted},
+  forbid/.style={->, thick, draw=pLms, dash pattern=on 1pt off 2pt},
+  lbl/.style={font=\scriptsize, fill=white, inner sep=1.5pt, align=center, text=pInk},
+  lblc/.style={font=\scriptsize, inner sep=1.5pt, align=center, text=pMuted},
+  % -------------------------------------------------------------- UML
+  umlclass/.style={rectangle split, rectangle split parts=3, draw=pAgent, thick,
+    rectangle split part fill={pAgentL,white,white}, font=\scriptsize, align=left,
+    inner sep=3pt, text width=#1},
+  umlclass/.default=36mm,
+  usecase/.style={ellipse, draw=pAgent, thick, fill=pAgentL, font=\scriptsize, align=center,
+    minimum width=30mm, minimum height=9mm, inner sep=1pt},
+  lifehead/.style={comp, font=\scriptsize\bfseries, minimum width=21mm, minimum height=7mm},
+  life/.style={draw=pMuted, dashed},
+  activation/.style={draw=pInk, fill=white, minimum width=2.2mm, inner sep=0pt},
+  msg/.style={->, thick, draw=pInk},
+  reply/.style={->, thick, draw=pMuted, dashed},
+  sse/.style={->, thick, draw=pAgent, densely dotted},
+  mlbl/.style={font=\scriptsize, inner sep=1.5pt, align=center, fill=white},
+  frag/.style={draw=pMuted, rounded corners=1pt},
+  fraglbl/.style={draw=pMuted, fill=pDataL, font=\scriptsize\bfseries, inner sep=2pt,
+    anchor=north west},
+  state/.style={rectangle, rounded corners=7pt, draw=pAgent, thick, fill=pAgentL,
+    font=\scriptsize, minimum width=20mm, minimum height=7mm, align=center},
+  initial/.style={circle, fill=pInk, minimum size=3mm, inner sep=0pt},
+  final/.style={circle, draw=pInk, thick, minimum size=3.8mm, inner sep=0pt,
+    path picture={\fill[pInk] (path picture bounding box.center) circle (1.1mm);}},
+  decision/.style={diamond, draw=pInk, thick, fill=white, aspect=1.4, inner sep=1.5pt,
+    font=\scriptsize, align=center},
+  action/.style={rectangle, rounded corners=6pt, draw=pInk, thick, fill=white,
+    font=\scriptsize, align=center, minimum height=7mm, inner xsep=5pt},
+  table/.style={rectangle split, rectangle split parts=2, draw=#1, thick,
+    rectangle split part fill={#1,white}, font=\tiny, align=left, inner sep=2.5pt},
+}
+
+% Stick-figure actor: \actor{<name>}{<position>}{<label>}
+\newcommand{\actor}[3]{%
+  \begin{scope}[shift={(#2)}, thick, draw=pInk]
+    \draw (0,0.42) circle (0.13);
+    \draw (0,0.29) -- (0,0.02) (-0.2,0.2) -- (0.2,0.2) (0,0.02) -- (-0.15,-0.22)
+      (0,0.02) -- (0.15,-0.22);
+    \node[font=\scriptsize\bfseries, below, align=center] (#1) at (0,-0.24) {#3};
+    \coordinate (#1-c) at (0,0.1);
+  \end{scope}}
+
+% Database table body: \tbl{name}{rows}, rows separated by \\ ; \pk{} and \fk{} mark keys.
+\newcommand{\pk}[1]{\underline{\textbf{#1}}}
+\newcommand{\fk}[1]{\textit{#1}\,\textsuperscript{FK}}

@@ -1,0 +1,62 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}[
+  chip/.style={rectangle, rounded corners=5pt, draw=#1, fill=white, thick, font=\scriptsize,
+    inner xsep=4pt, inner ysep=2.5pt, minimum height=6mm, align=center},
+  band/.style 2 args={rectangle, rounded corners=5pt, draw=#1, fill=#1!5, thick,
+    minimum width=118mm, minimum height=16.5mm,
+    label={[anchor=west, font=\footnotesize\bfseries, text=#1, xshift=2mm, align=left]west:#2}},
+  node distance=2mm]
+  % bands
+  \node[band={pWeb}{Presentation}]        (b1) at (0, 0)    {};
+  \node[band={pApi}{Gateway}]             (b2) at (0,-1.9)  {};
+  \node[band={pAgent}{Agents}]            (b3) at (0,-3.8)  {};
+  \node[band={pData}{Data}]               (b4) at (0,-5.7)  {};
+  \node[band={pLms}{LMS \& AI}]           (b5) at (0,-7.6)  {};
+  % chips: two rows per band, starting right of the band label
+  \def\cx{-3.6}
+  \def\row#1#2#3{% #1 band y, #2 row offset, #3 chips (comma list with colour)
+  }
+  \node[chip=pWeb, anchor=west] (c11) at (\cx,0.33) {React 19.3};
+  \node[chip=pWeb, right=of c11] (c12) {TypeScript 6.0};
+  \node[chip=pWeb, right=of c12] (c13) {Vite 8};
+  \node[chip=pWeb, right=of c13] (c14) {Tailwind CSS 4.3};
+  \node[chip=pWeb, anchor=west] (c15) at (\cx,-0.37) {shadcn/ui};
+  \node[chip=pWeb, right=of c15] (c16) {TanStack Query 5};
+  \node[chip=pWeb, right=of c16] (c17) {react-i18next (FR/EN)};
+
+  \node[chip=pApi, anchor=west] (c21) at (\cx,-1.57) {NestJS 12.3 (Node $\geq$ 22)};
+  \node[chip=pApi, right=of c21] (c22) {Kysely (typed SQL)};
+  \node[chip=pApi, right=of c22] (c23) {zod (validation)};
+  \node[chip=pApi, anchor=west] (c24) at (\cx,-2.27) {BullMQ 6.5 (producer)};
+  \node[chip=pApi, right=of c24] (c25) {JWT auth};
+
+  \node[chip=pAgent, anchor=west] (c31) at (\cx,-3.47) {Python 3.12 (uv)};
+  \node[chip=pAgent, right=of c31] (c32) {FastAPI 0.162};
+  \node[chip=pAgent, right=of c32] (c33) {LangGraph 1.2};
+  \node[chip=pAgent, right=of c33] (c34) {LangChain 1.4};
+  \node[chip=pAgent, anchor=west] (c35) at (\cx,-4.17) {pydantic};
+  \node[chip=pAgent, right=of c35] (c36) {psycopg 3};
+  \node[chip=pAgent, right=of c36] (c37) {bullmq 3.4 (consumer)};
+  \node[chip=pAgent, right=of c37] (c38) {Ragas 0.4};
+
+  \node[chip=pData, anchor=west] (c41) at (\cx,-5.7) {PostgreSQL 16};
+  \node[chip=pData, right=of c41] (c42) {pgvector};
+  \node[chip=pData, right=of c42] (c43) {Redis 7};
+  \node[chip=pData, right=of c43] (c44) {dbmate migrations};
+
+  \node[chip=pLms, anchor=west] (c51) at (\cx,-7.27) {Moodle 4.5.15 LTS};
+  \node[chip=pLms, right=of c51] (c52) {moodlehq/moodle-php-apache 8.3};
+  \node[chip=pAi, anchor=west] (c53) at (\cx,-7.97) {Groq (hosted LLMs)};
+  \node[chip=pAi, right=of c53] (c54) {Ollama (local)};
+  \node[chip=pAi, right=of c54] (c55) {bge-m3 embeddings (1024-d)};
+  % quality side band
+  \node[rectangle, rounded corners=5pt, draw=pOk, fill=pOkL, thick, minimum width=27mm,
+        minimum height=92.5mm, anchor=north west, align=center, font=\scriptsize]
+        (q) at ([xshift=3mm]b1.north east)
+        {\textbf{\footnotesize Quality \& tooling}\\[3mm]
+         Docker Compose\\[1.5mm] \texttt{just} task runner\\[1.5mm] Vitest, msw\\[1.5mm] pytest\\[1.5mm]
+         ESLint, Prettier\\[1.5mm] ruff, mypy};
+\end{tikzpicture}
+\end{document}

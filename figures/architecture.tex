@@ -1,0 +1,89 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}[node distance=4mm and 4mm]
+  % ---------------------------------------------------------------- users
+  \actor{student}{5.2,0.2}{Student}
+  \actor{teacher}{9.6,0.2}{Teacher}
+
+  % ---------------------------------------------------------------- presentation
+  \node[web, minimum width=28mm] (w1) at (1.9,-2.1) {Course reader\\[-1pt]\scriptsize Moodle pages \& files};
+  \node[web, minimum width=28mm, right=of w1] (w2) {Tutor chat\\[-1pt]\scriptsize live agent steps (SSE)};
+  \node[web, minimum width=28mm, right=of w2] (w3) {Adaptive quizzes\\[-1pt]\scriptsize progress \& suggestions};
+  \node[web, minimum width=28mm, right=of w3] (w4) {Teacher pages\\[-1pt]\scriptsize class, bank, material};
+
+  % ---------------------------------------------------------------- gateway
+  \node[api, minimum width=22mm] (g1) at (1.4,-5.0) {Auth (JWT)\\[-1pt]\scriptsize users, enrolments};
+  \node[api, minimum width=22mm, right=3mm of g1] (g2) {Course reader\\[-1pt]\scriptsize signed file links};
+  \node[api, minimum width=22mm, right=3mm of g2] (g3) {Chat sessions\\[-1pt]\scriptsize SSE proxy};
+  \node[api, minimum width=22mm, right=3mm of g3] (g4) {Quizzes \&\\[-1pt]teacher routes};
+  \node[api, minimum width=22mm, right=3mm of g4, very thick] (g5) {Moodle client\\[-1pt]\scriptsize the only one};
+
+  % ---------------------------------------------------------------- agents
+  \node[agent, minimum width=30mm] (a1) at (2.05,-8.0) {Orchestrator};
+  \node[agent, minimum width=30mm, right=3mm of a1] (a2) {Tutor (RAG)};
+  \node[agent, minimum width=30mm, right=3mm of a2] (a3) {Assessment};
+  \node[agent, minimum width=30mm, right=3mm of a3] (a4) {Diagnosis (BKT)};
+  \node[agent, minimum width=30mm, below=3mm of a1] (a5) {Recommendation};
+  \node[agent, minimum width=30mm, below=3mm of a2] (a6) {Context};
+  \node[agent, minimum width=30mm, below=3mm of a3] (a7) {Learning Analytics};
+  \node[agent, minimum width=30mm, below=3mm of a4] (a8) {Material Improvement};
+  \node[agent, fill=pAgent!14, font=\small\bfseries, minimum height=7mm,
+        below=4mm of a5.south west, anchor=north west, minimum width=129mm] (ss)
+        {StateStore: one shared, versioned learner + context state \quad$\cdot$\quad Tracer (agent\_event)};
+  \node[agent, minimum width=24mm, right=7mm of a4, yshift=-5.5mm, align=center] (wk)
+        {Worker\\[-1pt]\scriptsize BullMQ consumer\\[-1pt]\scriptsize ingestion, context sync};
+
+  % ---------------------------------------------------------------- data
+  \node[store, minimum width=46mm] (pg) at (5.6,-13.6)
+        {PostgreSQL 16 + pgvector\\[-1pt]\scriptsize app data $\cdot$ learner state $\cdot$ embeddings $\cdot$ traces};
+  \node[store, minimum width=30mm] (rd) at (wk |- pg) {Redis 7\\[-1pt]\scriptsize BullMQ queues};
+
+  % ---------------------------------------------------------------- external
+  \node[lms, minimum width=30mm, minimum height=14mm] (moodle) at (20.6,-5.0)
+        {\textbf{Moodle 4.5 LTS}\\[-1pt]\scriptsize LMS backend\\[-1pt]\scriptsize core never modified};
+  \node[ai, minimum width=30mm] (llm) at (20.6,-8.0)
+        {\textbf{Chat LLM}\\[-1pt]\scriptsize Groq (hosted) or\\[-1pt]\scriptsize Ollama (local)};
+  \node[ai, minimum width=30mm, below=4mm of llm] (emb)
+        {\textbf{Embeddings}\\[-1pt]\scriptsize bge-m3 (Ollama)};
+
+  % ---------------------------------------------------------------- layers
+  \begin{scope}[on background layer]
+    \node[layer={pWeb}{Presentation \quad React 19 SPA (apps/web)}, fit=(w1)(w4), inner ysep=13pt] (Lw) {};
+    \node[layer={pApi}{Gateway \quad NestJS 12 API (apps/api)}, fit=(g1)(g5), inner ysep=13pt] (Lg) {};
+    \node[layer={pAgent}{Agents \quad Python 3.12, FastAPI, LangGraph (apps/agents)},
+          fit=(a1)(a8)(ss)(wk), inner ysep=13pt] (La) {};
+    \node[layer={pData}{Data}, fit=(pg)(rd), inner ysep=13pt, inner xsep=14pt] (Ld) {};
+    \node[layer={pLms}{External services}, fit=(moodle)(emb), inner ysep=13pt] (Lx) {};
+  \end{scope}
+
+  % ---------------------------------------------------------------- flows
+  % Vertical flows use the x of a node, so every arrow between layers is straight.
+  \draw[call] (student) -- node[lblc, left, pos=0.3] {HTTPS} (student |- Lw.north);
+  \draw[call] (teacher) -- (teacher |- Lw.north);
+  \draw[call] (Lw.south -| w2) ++(-6mm,0) coordinate (x1) -- node[lblc, left] {REST (JSON) + SSE}
+        (x1 |- Lg.north);
+  \draw[stream] (Lg.north -| w2) ++(6mm,0) coordinate (x2) -- node[lblc, right] {token \& step stream}
+        (x2 |- Lw.south);
+  \draw[call] (Lg.south -| g3) ++(-6mm,0) coordinate (x3) -- node[lblc, left] {internal HTTP + SSE (shared token)}
+        (x3 |- La.north);
+  \draw[call] (La.north -| g4) coordinate (x4) -- node[lblc, right] {Moodle data \& files (internal endpoints)}
+        (x4 |- Lg.south);
+  \draw[call] (g5) -- node[lbl] {REST web services\\token, read-only} (moodle);
+  \draw[call] (a4.east -| La.east) -- node[lbl, above] {prompts} (llm);
+  \draw[call] (wk.east -| La.east) |- node[lbl, pos=0.75, below] {texts} (emb);
+  % Jobs: around the agents layer, on its right.
+  \draw[async] ([yshift=-3mm]Lg.east) -- ([yshift=-3mm]Lg.east -| La.east) -- ++(0.6,0)
+        |- node[lblc, right, pos=0.45] {jobs} (rd.east);
+  \draw[async] (rd.north) -- node[lblc, left, pos=0.25] {consume} (wk.south);
+  \draw[rw] (ss.south -| pg) -- node[lbl] {SQL (psycopg)} (pg.north);
+  % The gateway's own tables (users, sessions, views): around the agents layer, on its left.
+  \draw[rw] (Lg.west) -- ++(-0.6,0) |- node[lbl, pos=0.25] {SQL\\(Kysely)} (pg.west);
+  % Legend
+  \node[note, anchor=north east, align=left] at (Lx.south east |- Ld.north)
+    {\tikz[baseline=-0.5ex]\draw[call] (0,0) -- (0.6,0); synchronous request\\
+     \tikz[baseline=-0.5ex]\draw[async] (0,0) -- (0.6,0); queued job (BullMQ)\\
+     \tikz[baseline=-0.5ex]\draw[rw] (0,0) -- (0.6,0); data read/write\\
+     \tikz[baseline=-0.5ex]\draw[stream] (0,0) -- (0.6,0); server-sent event stream};
+\end{tikzpicture}
+\end{document}

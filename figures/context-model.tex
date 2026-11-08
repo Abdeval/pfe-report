@@ -1,0 +1,46 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}[
+  dim/.style={agent, font=\scriptsize, minimum width=46mm, minimum height=10mm, align=left, text width=43mm},
+  src/.style={comp, font=\scriptsize, minimum width=31mm, minimum height=9mm, align=center},
+  use/.style={comp, font=\scriptsize, draw=pApi, fill=pApiL, minimum width=31mm, minimum height=9mm, align=center},
+  arr/.style={->, thick, draw=pMuted}]
+  % ---------------------------------------------------------------- dimensions
+  \node[dim] (c1) at (0, 3.2) {\textbf{temporal}: deadlines (assignment \texttt{duedate}, quiz \texttt{timeclose})};
+  \node[dim] (c2) at (0, 1.9) {\textbf{pedagogical}: prerequisite graph; teacher objectives};
+  \node[dim] (l1) at (0,-0.6) {\textbf{temporal}: last access (Moodle or app), days inactive, upcoming deadlines};
+  \node[dim] (l2) at (0,-1.9) {\textbf{activity}: completion, quiz grades, current section, reading time};
+  \node[dim] (l3) at (0,-3.2) {\textbf{pedagogical}: readiness per section \textit{(derived by the Context agent)}};
+  \node[dim] (l4) at (0,-4.5) {\textbf{knowledge}: BKT mastery per section, misconceptions};
+  \begin{scope}[on background layer]
+    \node[layer={pAgent}{Course context \ (\texttt{course\_context})}, fit=(c1)(c2), inner ysep=13pt] (C) {};
+    \node[layer={pAgent}{Learner context \ (\texttt{learner\_course\_state})}, fit=(l1)(l4), inner ysep=13pt] (Lc) {};
+  \end{scope}
+  % ---------------------------------------------------------------- sources
+  \node[font=\footnotesize\bfseries, text=pMuted] at (-5.6, 4.3) {Sources};
+  \node[lms, src] (s1) at (-5.6, 3.2) {Moodle web services\\course contents, dates};
+  \node[api, src] (s4) at (-5.6, 1.6) {Teacher objectives\\(\texttt{course\_policy})};
+  \node[lms, src] (s5) at (-5.6,-0.6) {Moodle web services\\completion, grades, access};
+  \node[web, src] (s2) at (-5.6,-2.2) {In-app views\\(\texttt{activity\_view})};
+  \node[agent, src] (s3) at (-5.6,-4.5) {Diagnosis agent\\(BKT)};
+  \draw[arr] (s1) -- (c1.west);
+  \draw[arr] (s1.east) -- (c2.west);
+  \draw[arr] (s4.east) -- (c2.west);
+  \draw[arr] (s5) -- (l1.west);
+  \draw[arr] (s5.east) -- (l2.west);
+  \draw[arr] (s2.east) -- (l2.west);
+  \draw[arr] (s3) -- (l4.west);
+  % ---------------------------------------------------------------- consumers
+  \node[use] (u1) at (5.9, 2.55) {Recommendation\\ranking + reason};
+  \node[use] (u2) at (5.9, 0.65) {Tutor\\context hint};
+  \node[use] (u3) at (5.9,-1.25) {Interventions\\4 rule-based triggers};
+  \node[use] (u4) at (5.9,-3.15) {Class dashboard\\risk flags};
+  \node[font=\footnotesize\bfseries, text=pMuted] at (5.9, 4.1) {Consumers};
+  \draw[arr] (C.east) ++(0,-0.5) coordinate (ce) -- (ce -| u1.west);
+  \draw[arr] (Lc.east |- u2) -- (u2.west);
+  \draw[arr] (Lc.east |- u3) -- (u3.west);
+  \draw[arr] (Lc.east |- u4) -- (u4.west);
+  \draw[arr] (Lc.north east) ++(0,-0.15) -- (u1.south west);
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,53 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}[
+  ctr/.style={font=\scriptsize, minimum width=30mm, minimum height=11mm, align=center}]
+  % ---------------------------------------------------------------- containers (grid)
+  \node[web, ctr]  (web)    at (4.0, 2.1) {\textbf{web}\\nginx $\cdot$ :5173};
+  \node[lms, ctr]  (moodle) at (-0.5, 0.0) {\textbf{moodle}\\Apache/PHP $\cdot$ :8080\\vol.\ moodledata};
+  \node[api, ctr]  (api)    at (4.0, 0.0) {\textbf{api}\\Node $\cdot$ :3001};
+  \node[agent, ctr](ag)     at (8.0, 0.0) {\textbf{agents}\\uvicorn $\cdot$ :8000};
+  \node[lms, ctr]  (mdb)    at (-0.5,-2.2) {\textbf{moodle-db}\\Postgres 16\\vol.\ moodle-db};
+  \node[data, ctr] (pg)     at (4.0,-2.2) {\textbf{postgres}\\pgvector $\cdot$ :5432\\vol.\ pgdata};
+  \node[agent, ctr](wk)     at (8.0,-2.2) {\textbf{agents-worker}\\BullMQ consumer};
+  \node[data, ctr, dashed] (mig) at (4.0,-4.4) {\textbf{migrate}\\dbmate (one-shot)};
+  \node[data, ctr] (rd)     at (8.0,-4.4) {\textbf{redis}\\:6379};
+  \begin{scope}[on background layer]
+    \node[layer={pData}{\guillemotleft device\guillemotright\ Docker host (Docker Compose)},
+      fit=(web)(moodle)(ag)(mdb)(mig)(rd), inner xsep=9pt, inner ysep=14pt] (host) {};
+  \end{scope}
+  % ---------------------------------------------------------------- outside the host
+  \node[ai, font=\scriptsize, minimum width=30mm, minimum height=11mm] (groq) at (12.6, 0.0)
+    {\textbf{Groq API}\\hosted chat models};
+  \node[ai, font=\scriptsize, minimum width=30mm, minimum height=11mm] (oll) at (12.6,-2.2)
+    {\textbf{Ollama} $\cdot$ :11434\\local chat model, bge-m3};
+  \begin{scope}[on background layer]
+    \node[layer={pAi}{\guillemotleft cloud\guillemotright}, fit=(groq), inner ysep=13pt] {};
+    \node[layer={pAi}{\guillemotleft device\guillemotright\ Host machine}, fit=(oll), inner ysep=13pt] {};
+  \end{scope}
+  \actor{browser}{4.0,4.3}{Browser}
+  % ---------------------------------------------------------------- communication paths
+  \draw[call] (browser) -- node[lbl, pos=0.35] {HTTPS} (web);
+  \draw[call] (web) -- node[lbl] {REST + SSE} (api);
+  \draw[call] (api) -- node[lbl, above=1pt] {REST WS} (moodle);
+  \draw[rw]   (moodle) -- node[lbl] {SQL} (mdb);
+  \draw[call] (api) -- node[lbl] {HTTP + SSE} (ag);
+  \draw[rw]   (api) -- node[lbl] {SQL} (pg);
+  \draw[rw]   (ag.south west) -- node[lbl, pos=0.45] {SQL} (pg.north east);
+  \draw[rw]   (wk) -- node[lbl] {SQL} (pg);
+  \draw[call] (ag) -- node[lbl] {HTTPS} (groq);
+  \draw[call] (ag.south east) -- node[lbl, pos=0.4] {HTTP} (oll.north west);
+  \draw[call] (wk) -- node[lbl] {embeddings} (oll);
+  \draw[async] (mig) -- node[lbl] {schema} (pg);
+  \draw[async] (rd) -- node[lbl] {consume} (wk);
+  % jobs: from the API around the left of postgres and under migrate, up into redis
+  \draw[async] ([yshift=-3mm]api.west) -- ++(-5mm,0) coordinate (j1)
+     -- (j1 |- 0,-5.2) -| node[lbl, pos=0.25] {jobs} (rd.south);
+  % ---------------------------------------------------------------- legend
+  \node[note, anchor=north west] at ([yshift=-4mm]oll.south west -| groq.west)
+    {\tikz[baseline=-0.5ex]\draw[call] (0,0) -- (0.5,0); request\\
+     \tikz[baseline=-0.5ex]\draw[async] (0,0) -- (0.5,0); queued job / one-shot\\
+     \tikz[baseline=-0.5ex]\draw[rw] (0,0) -- (0.5,0); data read/write};
+\end{tikzpicture}
+\end{document}

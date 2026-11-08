@@ -1,0 +1,209 @@
+% =====================================================================
+%  thesis-style.sty : shared style for the Master's thesis (PFE)
+%  Loaded once in main.tex. Do not reload these packages in chapters.
+% =====================================================================
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{style/thesis-style}[2026/10/30 Thesis style]
+
+% ---------------------------------------------------------------------
+% Language, encoding, fonts
+% ---------------------------------------------------------------------
+\RequirePackage[T1]{fontenc}
+\RequirePackage[utf8]{inputenc}
+\RequirePackage{lmodern}
+% English is the main language; French is used for the "Résumé" only.
+\RequirePackage[french,english]{babel}
+\RequirePackage{csquotes}                 % \enquote{...}
+\RequirePackage{microtype}
+\RequirePackage{amsmath}
+
+% ---------------------------------------------------------------------
+% Page layout
+% ---------------------------------------------------------------------
+\RequirePackage[a4paper,top=2.5cm,bottom=2.5cm,left=3cm,right=2.5cm,
+                headheight=15pt]{geometry}
+\RequirePackage{setspace}
+\onehalfspacing
+\setlength{\parskip}{0.4em}
+
+% ---------------------------------------------------------------------
+% Colours (one accent colour for the whole document)
+% ---------------------------------------------------------------------
+\RequirePackage[table]{xcolor}
+\definecolor{thprimary}{HTML}{1F3A68}   % dark blue: titles, links
+\definecolor{thaccent}{HTML}{2E86AB}    % light blue: figures
+\definecolor{thlight}{HTML}{EAF2F8}     % box background
+\definecolor{thgray}{HTML}{5D6D7E}
+
+% ---------------------------------------------------------------------
+% Figures, tables, diagrams
+% ---------------------------------------------------------------------
+\RequirePackage{graphicx}
+\graphicspath{{images/}}
+\RequirePackage{float}
+\RequirePackage[font=small,labelfont={bf,color=thprimary},
+                labelsep=period]{caption}
+\RequirePackage{subcaption}
+\RequirePackage{booktabs}
+\RequirePackage{tabularx}
+\RequirePackage{array}
+\RequirePackage{multirow}
+\RequirePackage{longtable}
+\RequirePackage{makecell}
+\RequirePackage{pifont}
+\newcommand{\cyes}{\textcolor{thaccent}{\ding{51}}}   % tick
+\newcommand{\cno}{\textcolor{thgray}{\ding{55}}}      % cross
+\newcommand{\cpartly}{$\sim$}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\RequirePackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,fit,
+                backgrounds,calc,shadows}
+\tikzset{
+  bloc/.style={draw=thprimary,rounded corners=3pt,fill=thlight,
+               align=center,font=\small,minimum height=1cm,
+               inner sep=5pt},
+  blocstrong/.style={bloc,fill=thprimary,text=white,font=\small\bfseries},
+  arrow/.style={-{Stealth[length=2.2mm]},thick,draw=thgray},
+  layer/.style={draw=thaccent,rounded corners=4pt,dashed,
+                inner sep=8pt},
+}
+\RequirePackage{adjustbox}
+
+% ---------------------------------------------------------------------
+% Lists and boxes
+% ---------------------------------------------------------------------
+\RequirePackage{enumitem}
+\setlist{itemsep=2pt,topsep=4pt}
+\RequirePackage[most]{tcolorbox}
+\newtcolorbox{summarybox}[1][Summary]{
+  enhanced,colback=thlight,colframe=thprimary,
+  fonttitle=\bfseries,title=#1,boxrule=0.6pt,arc=2pt,
+  left=6pt,right=6pt,top=4pt,bottom=4pt}
+\newtcolorbox{definitionbox}[1]{
+  enhanced,colback=white,colframe=thaccent,
+  fonttitle=\bfseries,title=Definition (#1),boxrule=0.6pt,arc=2pt,
+  left=6pt,right=6pt,top=4pt,bottom=4pt}
+
+% ---------------------------------------------------------------------
+% Chapter and section titles
+% ---------------------------------------------------------------------
+\RequirePackage{titlesec}
+
+% (1) Numbered chapters: an opener page of their own, with the
+%     "Chapter N" label and the title centred inside a double frame.
+%     The chapter text starts on the next page.
+\newcommand{\chapteropener}[1]{%
+  \thispagestyle{plain}%
+  % Fixed-size page-high box: the frame is always full width and
+  % vertically centred, whatever the title length.
+  \noindent\begin{minipage}[c][0.86\textheight][c]{\textwidth}
+  \centering
+  \begin{tcolorbox}[enhanced,width=0.92\textwidth,
+      colback=white,colframe=thprimary,boxrule=1.6pt,arc=4pt,
+      borderline={0.5pt}{3pt}{thprimary},   % inner second line
+      left=14pt,right=14pt,top=26pt,bottom=26pt,halign=center]
+    {\Large\mdseries\scshape\color{thgray}\chaptertitlename~\thechapter\par}
+    \vspace{10pt}
+    {\color{thaccent}\rule{0.35\linewidth}{0.8pt}\par}
+    \vspace{12pt}
+    {\Huge\bfseries\color{thprimary}\setstretch{1.1}#1\par}
+  \end{tcolorbox}
+  \end{minipage}}
+\titleformat{\chapter}[block]
+  {\normalfont\centering}{}{0pt}{\chapteropener}[\clearpage]
+\titlespacing*{\chapter}{0pt}{-30pt}{0pt}
+
+% (2) Unnumbered chapters (Abstract, Contents, Lists, General
+%     Introduction, Bibliography, ...): a framed, centred title at the
+%     top of the page, the text follows on the same page.
+\newcommand{\framedtitle}[1]{%
+  \begin{tcolorbox}[enhanced,width=\textwidth,center,
+      colback=thlight,colframe=thprimary,boxrule=1.2pt,arc=4pt,
+      left=10pt,right=10pt,top=10pt,bottom=10pt,halign=center]
+    {\huge\bfseries\color{thprimary}\setstretch{1.1}#1\par}%
+  \end{tcolorbox}}
+\titleformat{name=\chapter,numberless}[block]
+  {\normalfont\centering}{}{0pt}{\framedtitle}
+\titlespacing*{name=\chapter,numberless}{0pt}{-10pt}{24pt}
+
+% Sections
+\titleformat{\section}{\normalfont\Large\bfseries\color{thprimary}}
+  {\thesection}{0.8em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries\color{thprimary}}
+  {\thesubsection}{0.8em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}
+  {\thesubsubsection}{0.8em}{}
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{2}
+
+% ---------------------------------------------------------------------
+% Headers and footers
+% ---------------------------------------------------------------------
+\RequirePackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{thgray}\nouppercase{\leftmark}}
+\fancyhead[R]{\small\color{thgray}\nouppercase{\rightmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+% Left: "Chapter N"; right: current section
+\renewcommand{\chaptermark}[1]{\markboth{\chaptertitlename~\thechapter}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection~#1}}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}}
+
+% Unnumbered chapter that appears in the table of contents
+\newcommand{\unnumberedchapter}[1]{%
+  \chapter*{#1}%
+  \addcontentsline{toc}{chapter}{#1}%
+  \markboth{#1}{}}
+
+% ---------------------------------------------------------------------
+% Bibliography (BibTeX + natbib, numeric, order of citation)
+% ---------------------------------------------------------------------
+\RequirePackage[numbers,sort&compress]{natbib}
+\setlength{\bibsep}{3pt}
+
+% ---------------------------------------------------------------------
+% Links (load last)
+% ---------------------------------------------------------------------
+\RequirePackage{xurl}
+\RequirePackage[hidelinks,unicode,bookmarksnumbered]{hyperref}
+\hypersetup{colorlinks=true,linkcolor=thprimary,citecolor=thaccent,
+            urlcolor=thaccent}
+\RequirePackage[nameinlink,noabbrev]{cleveref}
+
+% ---------------------------------------------------------------------
+% Work-in-progress notes (load todonotes with [disable] before
+% submission to hide them all)
+% ---------------------------------------------------------------------
+\RequirePackage[colorinlistoftodos]{todonotes}
+\newcommand{\todonote}[1]{\todo[inline,color=orange!25]{#1}}
+
+% Foreign words in italics
+\newcommand{\foreign}[1]{\textit{#1}}
+
+% ---------------------------------------------------------------------
+% Report figures (figures/*.pdf, compiled from figures/*.tex with the
+% shared figures/pfe-style.tex). \reportfig{name} scales a figure down
+% to the text width (and 82 % of the text height) but never enlarges it.
+% Wide figures go on a landscape page with the sidewaysfigure
+% environment (package rotating).
+% ---------------------------------------------------------------------
+\RequirePackage{rotating}
+\newcommand{\reportfig}[1]{%
+  \adjustbox{max width=\linewidth, max totalheight=0.82\textheight, center}{%
+    \includegraphics{figures/#1.pdf}}}
+\newcommand{\reportfigwide}[1]{%
+  \adjustbox{max width=\textheight, max totalheight=0.80\textwidth, center}{%
+    \includegraphics{figures/#1.pdf}}}
+
+% Long code identifiers (learner\_course\_state...) may break after an
+% underscore; a little extra stretch avoids overfull lines.
+\AtBeginDocument{\renewcommand{\_}{\textunderscore\allowbreak}}
+\setlength{\emergencystretch}{2em}
+
+\endinput

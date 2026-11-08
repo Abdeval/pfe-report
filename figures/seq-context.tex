@@ -1,0 +1,52 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}
+\node[web, lifehead, minimum width=21mm, align=center] (h-tr) at (0.00,0) {Scheduler\\[-1pt]or Student};
+\node[api, lifehead, minimum width=21mm, align=center] (h-api) at (2.35,0) {API};
+\node[data, lifehead, minimum width=21mm, align=center] (h-rq) at (4.70,0) {Redis\\[-1pt]queue};
+\node[agent, lifehead, minimum width=21mm, align=center] (h-wk) at (7.05,0) {Worker\\[-1pt]Context agent};
+\node[lms, lifehead, minimum width=21mm, align=center] (h-md) at (9.40,0) {Moodle};
+\node[data, lifehead, minimum width=21mm, align=center] (h-ss) at (11.75,0) {StateStore};
+\node[data, lifehead, minimum width=21mm, align=center] (h-iv) at (14.10,0) {Intervention\\[-1pt]feed};
+\draw[life] (h-tr.south) -- (0.00,-15.73);
+\draw[life] (h-api.south) -- (2.35,-15.73);
+\draw[life] (h-rq.south) -- (4.70,-15.73);
+\draw[life] (h-wk.south) -- (7.05,-15.73);
+\draw[life] (h-md.south) -- (9.40,-15.73);
+\draw[life] (h-ss.south) -- (11.75,-15.73);
+\draw[life] (h-iv.south) -- (14.10,-15.73);
+\node[activation, minimum height=1.08cm, anchor=north] at (2.35,-5.66) {};
+\node[activation, minimum height=7.50cm, anchor=north] at (7.05,-5.04) {};
+\node[font=\scriptsize\itshape, anchor=north west, fill=white, inner sep=1pt] at (-0.50,-1.10) {[every 10 minutes]};
+\draw[msg, dashed] (0.00,-1.85) -- node[mlbl, above=0.5pt] {repeatable job} (4.70,-1.85);
+\draw[frag, dashed] (-1.05,-2.35) -- (8.10,-2.35);
+\node[font=\scriptsize\itshape, anchor=north west, fill=white, inner sep=1pt] at (-0.95,-2.40) {[a learner opens a course]};
+\draw[msg] (0.00,-3.13) -- node[mlbl, above=0.5pt] {open course} (2.35,-3.13);
+\draw[msg, dashed] (2.35,-3.75) -- node[mlbl, above=0.5pt] {sync (max.\ 1/min)} (4.70,-3.75);
+\draw[frag] (-1.05,-1.07) rectangle (8.10,-4.22);
+\node[fraglbl] at (-1.05,-1.07) {alt};
+\draw[msg, dashed] (4.70,-4.57) -- node[mlbl, above=0.5pt] {\texttt{context-sync} job} (7.05,-4.57);
+\draw[msg] (6.94,-5.19) -- node[mlbl, above=0.5pt] {internal: context sources} (2.35,-5.19);
+\draw[msg] (2.46,-5.81) -- node[mlbl, above=0.5pt] {web services (read)} (9.40,-5.81);
+\draw[reply] (9.40,-6.43) -- node[mlbl, above=0.5pt] {contents, completion} (2.46,-6.43);
+\draw[reply] (2.35,-7.05) -- node[mlbl, above=0.5pt] {sources + in-app views} (6.94,-7.05);
+\draw[msg] (7.16,-7.55) -- ++(0.45,0) -- ++(0,-0.32) -- (7.16,-7.87);
+\node[mlbl, anchor=west, fill=none, align=left] at (7.66,-7.71) {build course context};
+\draw[msg] (7.16,-8.41) -- node[mlbl, above=0.5pt] {commit \texttt{course\_context}} (11.75,-8.41);
+\node[font=\scriptsize\itshape, anchor=north west, fill=white, inner sep=1pt] at (2.05,-9.18) {[each enrolled learner]};
+\draw[msg] (7.16,-9.81) -- ++(0.45,0) -- ++(0,-0.32) -- (7.16,-10.13);
+\node[mlbl, anchor=west, fill=none, align=left] at (7.66,-9.97) {build learner context};
+\draw[msg] (7.16,-10.67) -- node[mlbl, above=0.5pt] {commit (version check)} (11.75,-10.67);
+\draw[msg] (7.16,-11.17) -- ++(0.45,0) -- ++(0,-0.32) -- (7.16,-11.49);
+\node[mlbl, anchor=west, fill=none, align=left] at (7.66,-11.33) {evaluate the 4 triggers};
+\draw[msg] (7.16,-12.03) -- node[mlbl, above=0.5pt] {insert new (dedup.\ key)} (14.10,-12.03);
+\draw[frag] (1.30,-9.15) rectangle (15.15,-12.50);
+\node[fraglbl] at (1.30,-9.15) {loop};
+\draw[msg] (0.00,-13.05) -- node[mlbl, above=0.5pt] {student: GET feed} (2.35,-13.05);
+\draw[msg] (2.35,-13.67) -- node[mlbl, above=0.5pt] {read new / seen} (14.10,-13.67);
+\draw[reply] (14.10,-14.29) -- node[mlbl, above=0.5pt] {interventions} (2.35,-14.29);
+\draw[reply] (2.35,-14.91) -- node[mlbl, above=0.5pt] {suggestion + why} (0.00,-14.91);
+\node[note, text=pInk, anchor=north west] at (-1.00,-15.98) {\tikz[baseline=-0.5ex]\draw[msg] (0,0) -- (0.5,0); call \quad \tikz[baseline=-0.5ex]\draw[reply] (0,0) -- (0.5,0); reply \quad  \quad \tikz[baseline=-0.5ex]\draw[msg, dashed] (0,0) -- (0.5,0); queued job};
+\end{tikzpicture}
+\end{document}

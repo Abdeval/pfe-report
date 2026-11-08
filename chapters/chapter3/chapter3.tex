@@ -1,0 +1,912 @@
+% =====================================================================
+%  Chapter 3: Contributions
+%  Sources: docs/adr/0001-0008, SOTA_Articles_Report.pdf (gaps G1-G8),
+%  docs/report/cowork-script.md section 7 (facts and numbers).
+% =====================================================================
+\chapter{Contributions}
+\label{chap-contribution}
+
+% =====================================================================
+\section{Introduction and positioning}
+\label{sec-c-intro}
+% =====================================================================
+
+The analysis of related work in \cref{sec-synthesis} shows a clear
+picture. Recent systems combine LLM agents with an LMS
+(ELA Tutor~\cite{lopezgoyez2026ela}), describe interoperable architectures
+that were never implemented (IJACSA-Arch~\cite{khaddar2026ijacsa}), or model
+a rich learner context without any language model
+(CA-MA-DRL~\cite{sharif2026camadrl}). None of them grounds specialised LLM
+agents on an explicit, shared model of the learner and of the learner's
+context (knowledge, activity, temporal and pedagogical constraints) that
+adapts the learning path, the content and the feedback together inside a
+real LMS. None of them measures the effect of such a system on learning.
+This work aims to fill that gap.
+
+This chapter presents what the framework adds to the state of the art.
+\Cref{sec-c-gaps} maps each gap identified in \cref{chap-sota} to a
+contribution and gives its status. Sections~\ref{sec-c1} to~\ref{sec-c9}
+then present each contribution with the same structure: the
+\emph{problem} it addresses, the \emph{proposal}, \emph{how it works},
+the \emph{evidence} collected so far and its \emph{limits}.
+\Cref{sec-c-compare} compares the framework with the closest related work,
+and \cref{sec-c-limits} states the limits of the whole work.
+\Cref{fig-contribution-map} gives an overview: each gap on the left is
+linked to the contributions that address it, and each contribution is
+coloured by its status.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{contribution-map}
+  \caption{From literature gaps to contributions. Colours give the
+  status of each contribution.}
+  \label{fig-contribution-map}
+\end{figure}
+
+% =====================================================================
+\section{From gaps to contributions}
+\label{sec-c-gaps}
+% =====================================================================
+
+\Cref{tab-gaps-contributions} links the eight gaps of the literature
+(G1 to G8) to the contributions of this work (C1 to C10, plus the
+Material Improvement agent and the planned evaluation). The status column
+is deliberately strict: a contribution is \emph{implemented} only when it
+runs in the prototype, \emph{partial} when a stated part is missing, and
+\emph{future work} when nothing of it runs yet.
+
+\begin{table}[htbp]
+\centering
+\caption{Gaps in the literature and the contributions that address them}
+\label{tab-gaps-contributions}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{1.0cm}YL{3.0cm}L{2.6cm}L{1.3cm}@{}}
+\toprule
+\textbf{Gap} & \textbf{What is missing in the literature} & \textbf{Our contribution} &
+  \textbf{Status} & \textbf{Where} \\
+\midrule
+G1 & No LLM multi-agent system has an explicit, multi-dimensional context model &
+  C1 shared, versioned learner + context model; C2 Context agent &
+  Implemented (device and affect not modelled) & \ref{sec-c1}, \ref{sec-c2} \\
+G2 & LLM agents are disconnected from knowledge tracing &
+  C1; C3 BKT behind the agents & Implemented (offline validation is future work) &
+  \ref{sec-c1}, \ref{sec-c3} \\
+G3 & Adaptation covers one dimension at a time, rarely inside a real LMS &
+  C4 specialised agents on one graph; C10 Moodle integration &
+  C4 implemented; C10 partial (LTI 1.3 is future work) & \ref{sec-c4}, \ref{sec-c8} \\
+G4 & Tutoring is reactive & C2 Context agent; C5 proactive triggers &
+  Implemented (4 rule-based triggers) & \ref{sec-c2} \\
+G5 & No evidence of learning effect & Learning-gain evaluation &
+  Future work (planned sprint) & \ref{sec-c-limits} \\
+G6 & Weak teacher control & C6 visible ``why''; C7 teacher in the loop;
+  Material Improvement agent & Implemented & \ref{sec-c4}, \ref{sec-c6}, \ref{sec-c7} \\
+G7 & Grounding and reliability across agents are vague or unmeasured &
+  C6; C8 grounding and guardrails; Material Improvement agent &
+  Implemented (a separate verifier agent is future work) &
+  \ref{sec-c5}, \ref{sec-c7} \\
+G8 & No French or Arabic support; cloud LLMs on student data; local context ignored &
+  C8 (local-model option); C9 multilingual & C8 implemented; C9 partial (Arabic is future work) &
+  \ref{sec-c5}, \ref{sec-c9} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =====================================================================
+\section{A shared, versioned learner and context model (C1)}
+\label{sec-c1}
+% =====================================================================
+
+\paragraph{Problem.} In the systems reviewed, the learner is described by
+a profile written in natural language by an LLM
+(GenMentor~\cite{wang2025genmentor}), by an interaction history and a
+two-variable state (ELA Tutor~\cite{lopezgoyez2026ela}), or by engagement
+features (IJACSA-Arch~\cite{khaddar2026ijacsa}). The only rich context
+model, in CA-MA-DRL~\cite{sharif2026camadrl}, is not used by language
+models and was not implemented (gap G1). When several agents keep their
+own picture of the learner, they also disagree with each other, and their
+decisions cannot be audited.
+
+\paragraph{Proposal.} The framework keeps \emph{one} learner state per
+pair (learner, course), shared by every agent. This \emph{shared learner
+state} holds four parts: the knowledge of the learner (the BKT mastery of
+each section of the course, see \cref{sec-c3}), the misconceptions
+observed in wrong answers, interaction statistics, and the context of the
+learner. It is stored in PostgreSQL, versioned, and read and written by
+every agent through a single component, the \texttt{StateStore}. No agent
+keeps a private copy, and every change is traced.
+\Cref{fig-multi-agent} shows the agents around this state, with what each
+of them reads and writes.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{multi-agent}
+  \caption{Specialised agents around one shared, versioned state.}
+  \label{fig-multi-agent}
+\end{figure}
+
+\paragraph{How it works.} The state of a learner in a course is a row of
+the table \texttt{learner\_course\_state}. Its parts are \texttt{jsonb}
+columns, mirrored by Pydantic models on the agent side, and the row
+carries an integer \texttt{version}. A turn of an agent follows three
+steps:
+\begin{enumerate}
+  \item the agent loads the state and its version
+        (\texttt{load\_turn\_context});
+  \item it computes its change as a \emph{pure function} from the old
+        state to the new state, without writing anything;
+  \item \texttt{commit\_turn} applies the change with an update guarded
+        by the version read in step~1
+        (\texttt{UPDATE \dots{} WHERE version = <version read>}).
+\end{enumerate}
+If another agent committed in between, the guarded update matches no row.
+The store then reads the state again and applies the same function again,
+with a bounded number of retries. This is optimistic concurrency: no
+update is lost, and nothing is locked while an LLM is generating text. The
+messages of the turn, the new state and a \texttt{context\_snapshot} (the
+context the agents saw and produced) are written in one transaction, so
+the history of the conversation and the state always agree. Every routing
+decision and every agent step is also written to an audit table,
+\texttt{agent\_event}, keyed by a \texttt{trace\_id}. LangGraph's own state
+is only the working memory of one turn, so there is no second copy of the
+conversation.
+
+The \emph{context model} has two levels (\cref{tab-context-dimensions}).
+The \emph{course context} is the same for every learner and is stored in
+its own versioned table, \texttt{course\_context}. The \emph{learner
+context} is a part of the shared learner state, so it is versioned and
+committed with the same mechanism as the mastery. Each dimension has an
+explicit source, which answers the definition of context as the
+information that characterises the situation of an
+entity~\cite{dey2001context}. \Cref{fig-context-model} shows the sources
+that feed each dimension and the components that use it.
+
+\begin{table}[htbp]
+\centering
+\caption{Dimensions of the context model}
+\label{tab-context-dimensions}
+\small
+\begin{tabularx}{\textwidth}{@{}L{1.5cm}L{2.1cm}YL{2.8cm}@{}}
+\toprule
+\textbf{Level} & \textbf{Dimension} & \textbf{Content} & \textbf{Source} \\
+\midrule
+Course & temporal & deadlines (assignment \texttt{duedate}, quiz \texttt{timeclose}) & Moodle web services \\
+Course & pedagogical & prerequisite graph (Moodle restrict-access conditions, else course order); teacher objectives & Moodle, teacher \\
+Learner & temporal & last access (the latest of Moodle and our app), days inactive, upcoming deadlines not completed & Moodle + app \\
+Learner & activity & completion per activity and section (Moodle, plus in-app views for ``view'' activities), Moodle quiz grades, current section, reading time per section & Moodle + app \\
+Learner & pedagogical & readiness per section (prerequisites mastered or completed) & derived by the Context agent \\
+Learner & knowledge & BKT mastery per section, misconceptions & Diagnosis agent \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{context-model}
+  \caption{The explicit context model and its sources.}
+  \label{fig-context-model}
+\end{figure}
+
+The parts of the state are \texttt{jsonb} on purpose: a new agent can
+start writing its part of the learner model without a database
+migration. Fields that become stable are then promoted to typed
+attributes, and to columns if they need an index.
+
+\paragraph{Evidence.} The agents are covered by 159 automated tests
+(\texttt{pytest}), in which LLMs are replaced by fake models, so the tests
+never call an LLM. The history of a learner can be replayed from
+\texttt{context\_snapshot}, one version per turn. In a
+live verification on the demo course, a student who had been inactive in
+Moodle opened a lesson in the app; the forced context sync then recorded
+the activity as completed, set the days of inactivity to zero, moved the
+current section forward and marked the next section as ready, all in one
+new version of the learner state.
+
+\paragraph{Limits.} Device and affect are not modelled: they are cheap to
+add from the web app but were not needed for the thesis. The
+\texttt{jsonb} parts trade some type safety in SQL for the ability to
+evolve; validation happens in the Pydantic models. The embedding
+dimension is fixed in the schema (1024 for bge-m3), so changing the
+embedding model requires a migration and a new ingestion of the course.
+
+% =====================================================================
+\section{The Context agent and proactive interventions (C2, C5)}
+\label{sec-c2}
+% =====================================================================
+
+\paragraph{Problem.} The tutors reviewed are reactive: they wait for the
+learner's question (gap G4). ELA Tutor chooses \emph{how} to answer a
+question, but it does not act when a deadline approaches or when a
+learner stops working~\cite{lopezgoyez2026ela}. Proactive triggers exist
+only as rules in an unimplemented design~\cite{khaddar2026ijacsa} or as
+part of a conceptual framework~\cite{sharif2026camadrl}.
+
+\paragraph{Proposal.} A dedicated \emph{Context agent} implements the
+context lifecycle: it acquires data from Moodle and from the app, models
+it into the course and learner contexts, and disseminates it to the other
+agents. After each update, explicit rules turn the context into
+\emph{interventions}: suggestions shown to the learner with their reason
+and a suggested action.
+
+\paragraph{How it works.} Moodle offers no web service for activity logs,
+and its core is never modified, so the context is \emph{polled} through
+web services, always through the API, which stays the only Moodle client
+(\cref{sec-c8}). The sources are the course contents with their
+restrictions and dates, the completion status of each learner, the list
+of enrolled users with their last access, and the grade items. The
+Context agent runs in two cases:
+\begin{itemize}
+  \item on a schedule: a BullMQ repeatable job every 10 minutes for every
+        course with ingested material;
+  \item on demand: when a learner opens a course in the web app,
+        throttled to one sync per minute, and forced after the first view
+        of an activity.
+\end{itemize}
+The sequence of a sync is detailed in \cref{sec-d-dynamic}
+(\cref{fig-seq-context}).
+
+Implementing the agent showed how much of the context Moodle actually
+exposes, and these findings shaped the design. The service account needs
+the capability \texttt{moodle/course:ignoreavailabilityrestrictions}
+(read-only, as a teacher); otherwise Moodle evaluates the restrictions as
+the service account and hides restricted activities and their grades.
+The assignment and quiz web services return nothing for a user who is not
+enrolled, so deadlines are read from the module dates of the course
+contents. The raw rule of a restriction is not exposed, only its HTML
+sentence, from which the referenced activity is read. Finally, the
+\emph{current section} is defined as the furthest section with completed
+activity: with ``the first unfinished section'', a prerequisite gap could
+never be detected.
+
+\Cref{tab-triggers} lists the four triggers. They are rules written in
+code; the LLM writes nothing at this step. Each intervention carries a
+de-duplication key (trigger, target and period), so a sync never repeats
+a suggestion that the learner has already seen or dismissed, and a status
+(new, seen, dismissed, done).
+
+\begin{table}[htbp]
+\centering
+\caption{Proactive triggers of the Context agent (default thresholds)}
+\label{tab-triggers}
+\small
+\begin{tabularx}{\textwidth}{@{}L{3.4cm}YY@{}}
+\toprule
+\textbf{Trigger} & \textbf{Condition} & \textbf{Suggested action} \\
+\midrule
+\texttt{deadline\_soon} & a deadline within 3 days, activity not completed & open the activity; a quiz if the section is weak \\
+\texttt{failed\_quiz} & Moodle quiz grade below 50\,\% & a quiz on that section \\
+\texttt{inactive} & no access for 7 days & the recommended next section \\
+\texttt{prerequisite\_gap} & the learner works on a section whose prerequisites are not met & a quiz on the prerequisite \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The other agents read the context through the shared state. The
+Recommendation agent puts first a section with a close deadline that is
+not mastered, and places an unmet prerequisite before the section that
+needs it; a close deadline comes before an unmet prerequisite, because
+the due date does not move. The Tutor receives a one-line summary of the
+context, for example a deadline in two days on the current section, so
+that it can relate its answer to what the learner is doing.
+
+\paragraph{Evidence.} The class view of the teacher reuses the same
+trigger rules as risk flags (\cref{sec-c6}). In the verification of the
+teacher pages on the demo course, each of the three students showed the
+expected flags: close deadline, failed Moodle quiz, prerequisite gap,
+inactivity and below objective. In a live tutor turn, the \texttt{adapt}
+step reported the deadline of an assignment due in two days on the
+current section (\cref{sec-c4}).
+
+\paragraph{Limits.} Polling adds a delay of up to the sync interval and a
+Moodle load proportional to the number of learners times the number of
+courses. A local Moodle plugin for events is the upgrade path. Deadline
+extensions granted to one learner are not read yet: the course deadline
+applies. The triggers are rules with fixed defaults; they were checked on
+the demo course but not tuned on real classes.
+
+% =====================================================================
+\section{Knowledge tracing behind the agents (C3)}
+\label{sec-c3}
+% =====================================================================
+
+\paragraph{Problem.} No reviewed LLM-based system feeds a calibrated
+estimate of mastery to its agents (gap G2). Deep knowledge tracing
+appears only in CA-MA-DRL, which uses no LLM~\cite{sharif2026camadrl}.
+Without such an estimate, an agent cannot decide what the learner should
+study next, nor adapt the depth of an explanation.
+
+\paragraph{Proposal.} The framework applies Bayesian Knowledge Tracing
+(BKT)~\cite{corbett1994kt} to each section of the Moodle course. A
+\emph{topic} is a Moodle section, with the key \texttt{s<n>}: the teacher
+already defines sections, they are stable across re-ingestions, and a jury
+can read them. Agents receive mastery numbers, not raw text.
+
+\paragraph{How it works.} Each topic carries $P(L)$, the probability that
+the learner has learned it. After a graded answer, the posterior is
+computed with the slip probability $S$ and the guess probability $G$.
+After a correct answer:
+\begin{equation}
+  P(L \mid \text{correct}) =
+  \frac{P(L)\,(1-S)}{P(L)\,(1-S) + \bigl(1-P(L)\bigr)\,G},
+  \label{eq-bkt-correct}
+\end{equation}
+and after an incorrect answer:
+\begin{equation}
+  P(L \mid \text{incorrect}) =
+  \frac{P(L)\,S}{P(L)\,S + \bigl(1-P(L)\bigr)\,(1-G)}.
+  \label{eq-bkt-incorrect}
+\end{equation}
+The learner may then learn the topic at this opportunity, with
+probability $T$:
+\begin{equation}
+  P(L') = P(L \mid \text{obs}) + \bigl(1 - P(L \mid \text{obs})\bigr)\,T.
+  \label{eq-bkt-learn}
+\end{equation}
+\Cref{tab-bkt-params} gives the parameters. A topic counts as mastered
+when $P(L) \geq 0.95$, or at the target set by the teacher for that
+section (\cref{sec-c6}). Only graded answers move $P(L)$; chat turns are
+weak and ambiguous evidence, so they only update the interaction
+statistics. A wrong answer also records the misconception attached to the
+chosen distractor. The update is a pure function committed through the
+\texttt{StateStore}, in the same transaction as the response, and traced
+with the values before and after.
+
+\begin{table}[htbp]
+\centering
+\caption{BKT parameters (global defaults)}
+\label{tab-bkt-params}
+\small
+\begin{tabular}{@{}llc@{}}
+\toprule
+\textbf{Parameter} & \textbf{Meaning} & \textbf{Value} \\
+\midrule
+$P(L_0)$ & prior probability that the topic is known & 0.20 \\
+$T$ & probability of learning at each opportunity & 0.15 \\
+$S$ & slip: wrong answer although the topic is known & 0.10 \\
+$G$ & guess: right answer although unknown (4-option item) & 0.25 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Recommendation agent ranks the sections that have ingested material
+with explicit rules: sections never assessed first (in course order), then
+the lowest $P(L)$ below the mastery threshold, then sections with
+recurring misconceptions. Key sections chosen by the teacher come first
+among the sections never assessed and among those with low mastery, and
+the context rules of \cref{sec-c2} apply. Every
+recommendation carries a reason code, translated by the interface.
+\Cref{fig-adaptive-loop} shows the resulting adaptive loop: a quiz
+produces graded answers, the Diagnosis agent updates the mastery, the
+Recommendation agent proposes the next section, and the Context agent
+feeds interventions into the same state. The Tutor also reads the mastery
+to adapt the depth of its explanations.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{adaptive-loop}
+  \caption{The adaptive loop.}
+  \label{fig-adaptive-loop}
+\end{figure}
+
+\paragraph{Evidence.} The behaviour of BKT with these parameters was
+measured by simulation: 2000 simulated learners per profile, 20 answers
+each (\cref{tab-bkt-sim}). Learners who know the topic reached mastery
+after a median of 3 answers; learners who learn it as the model assumes,
+after 7. Learners who only guess were wrongly rated mastered 1.6\,\% of
+the time after 5 answers, 2.5\,\% after 10 and 2.4\,\% after 20, and
+dropped back below the threshold on their next wrong answer, so the
+section was recommended again. Over 20 answers, 21.1\,\% of them crossed
+the threshold at least once, after a median of 11 answers: the learning
+term $T$ slowly lifts the estimate. A rule ``at least $N$ answers before
+mastery'' was considered and rejected: from the prior, three correct
+answers already give $P(L) \approx 0.958$ by \crefrange{eq-bkt-correct}{eq-bkt-learn}.
+
+\begin{table}[htbp]
+\centering
+\caption{BKT simulation (2000 learners per profile, 20 answers each)}
+\label{tab-bkt-sim}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Profile} & \textbf{$P(L)$ after 5} & \textbf{after 10} & \textbf{after 20} &
+  \textbf{reached mastery} & \textbf{median answers} \\
+\midrule
+knows   & 0.96 & 1.00 & 1.00 & 100\,\%  & 3 \\
+learns  & 0.57 & 0.81 & 0.96 & 94.5\,\% & 7 \\
+guesses & 0.33 & 0.35 & 0.35 & 21.1\,\% (at least once) & 11 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Limits.} The parameters are global, not fitted per section.
+Fitting $T$ per topic from real answers (for example with
+expectation-maximisation) is the principled fix for the guessing profile,
+once enough data exists. The offline validation of the model on a public
+dataset such as ASSISTments, with the AUC as metric, is future work.
+
+% =====================================================================
+\section{Specialised agents on one explicit graph (C4, C6)}
+\label{sec-c4}
+% =====================================================================
+
+\paragraph{Problem.} Each reviewed system adapts one dimension: ELA Tutor
+adapts how to answer, GenMentor adapts the path and the content outside
+any LMS, IJACSA-Arch adapts interventions by rules (gap G3). In addition,
+when an LLM takes pedagogical decisions, the decisions are hard to
+explain to a teacher (gaps G6 and G7).
+
+\paragraph{Proposal.} The framework splits the work among specialised
+agents, coordinated through explicit graphs and the shared state
+(\cref{tab-agents-roster}). It follows a principle already stated by ELA
+Tutor~\cite{lopezgoyez2026ela}: \emph{code decides, the LLM writes}.
+Routing, grading, mastery, ranking and triggers are computed in code; the
+LLM only classifies when the rules are not confident, and writes text.
+Every decision carries a short ``why'' visible to the learner and to the
+teacher. There is no separate Planner or Content Generator agent: the
+Recommendation agent plans the path, and the Assessment agent generates
+the exercises.
+
+\begin{table}[htbp]
+\centering
+\caption{The agents of the framework: role, who decides, use of the LLM}
+\label{tab-agents-roster}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{2.4cm}YL{3.3cm}L{2.6cm}@{}}
+\toprule
+\textbf{Agent} & \textbf{Role} & \textbf{Decision by} & \textbf{LLM use} \\
+\midrule
+Orchestrator & classify the message, route the turn & rules first; LLM classifier only when the rules are not confident & structured classification (fallback) \\
+Tutor & answer from the course & similarity gate (code); hint mode for exercises & writes the answer \\
+Assessment & quizzes & bank first; review mode & writes missing questions (validated in code) \\
+Diagnosis & knowledge tracing & BKT (code) & none \\
+Recommendation & what to study next & rules (code) & none \\
+Context & context model and interventions & rules (code) & none \\
+Learning Analytics & class dashboard & code & none \\
+Material Improvement & improve the material & 5 detectors (code, statistics) & writes diagnosis and draft \\
+Ingestion (worker) & index the course & code & embeddings only \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{How it works.} A tutor turn is a LangGraph~\cite{langgraph_docs}
+graph (\cref{fig-tutor-graph}). The \texttt{classify} node finds the intent
+of the message (concept, exercise, quiz, course\_info, smalltalk or
+off\_topic), its language and its topic, with rules first. Smalltalk ends
+the turn. Otherwise \texttt{retrieve} searches the course
+(\cref{sec-c5}), and a gate written in code chooses the next node: a quiz
+intent leads to \texttt{suggest\_quiz}; a best similarity at or above the
+threshold leads to \texttt{adapt} then \texttt{generate}; a lower
+similarity leads to \texttt{not\_found}. The \texttt{adapt} step maps the
+mastery of the section to a level: below 0.4 the explanation is low level
+(step by step), below 0.8 medium, otherwise high; the level is
+\emph{unknown} if the section was never assessed.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{tutor-graph}
+  \caption{Graph of a tutor turn: code decides, the LLM writes.}
+  \label{fig-tutor-graph}
+\end{figure}
+
+Each node emits an \emph{agent step}, first \emph{running} then
+\emph{done} with its details and its duration, streamed to the chat as a
+server-sent event. The details are the values that the node already
+records in its \texttt{agent\_event} span, so what the student sees is
+what the trace holds. The steps are stored with the answer, so a reopened
+conversation shows them again. The model's own chain of thought is
+\emph{never} shown: in hint mode it could reveal the solution that the
+tutor must withhold, and it is not a trace of the system's decisions.
+
+\paragraph{Evidence.} For the question ``What does \texttt{range(5)} give
+in a \texttt{for} loop?'', the chat showed: \texttt{classify} (concept,
+by rule, 7\,ms), \texttt{retrieve} (6 passages, best section ``Conditions
+and loops'' with similarity 0.62, 3.4\,s), \texttt{adapt} (mastery 20\,\%,
+step by step, deadline in 2 days) and \texttt{generate} (1.2\,s, with a
+citation). An off-topic question about Django and PostgreSQL ended in
+\texttt{not\_found}, with the closest sections of the course. The steps
+make the multi-agent decisions visible at no extra LLM cost.
+
+\paragraph{Limits.} The rules of the classifier and the thresholds were
+set on one demo course. The LLM classifier is only a fallback, and the
+router is the extension point for a learned policy such as the
+reinforcement-learning meta-agent of ELA Tutor~\cite{lopezgoyez2026ela},
+which is out of scope here.
+
+% =====================================================================
+\section{Grounding and guardrails (C8)}
+\label{sec-c5}
+% =====================================================================
+
+\paragraph{Problem.} Grounding on the course material is vague in the
+reviewed systems (``curated sources'' in ELA Tutor) or only described
+conceptually (IJACSA-Arch), and the cascade of hallucinations from one
+agent to the next, which the survey of LLM-based multi-agent systems warns
+about~\cite{guo2024mas}, is not measured (gap G7). Most systems also send
+student data to proprietary cloud models (gap G8), which matters under
+the Algerian law on personal data~\cite{algeria_law1807}.
+
+\paragraph{Proposal.} The framework grounds every generated text in the
+course and checks it in code before it reaches a learner. A local model
+can replace the hosted one.
+
+\paragraph{How it works.}
+\begin{itemize}
+  \item \emph{Hybrid retrieval.} The query is matched by vector similarity
+        (pgvector, cosine) and by PostgreSQL full-text search, and the two
+        rankings are fused with reciprocal rank fusion~\cite{cormack2009rrf}.
+        The 6 best passages are kept. The embeddings are computed with the
+        multilingual model bge-m3~\cite{chen2024bgem3}.
+  \item \emph{Similarity gate.} An answer is generated only when the best
+        similarity reaches the threshold (0.42 by default, configurable).
+  \item \emph{Citations checked in code.} The answer cites passages by
+        number; the numbers are validated against the retrieved passages.
+  \item \emph{Refusal.} Below the threshold, the tutor says that the
+        answer is not in the course and lists the closest sections.
+  \item \emph{Hint mode.} For an exercise, the tutor gives hints, not the
+        solution.
+  \item \emph{Validated generation.} A generated quiz item is kept only if
+        it has four distinct options, a valid answer index, sources within
+        the retrieved chunks and a unique stem. A draft of the Material
+        Improvement agent that quotes a passage keeps the quote only if it
+        appears in the excerpts.
+  \item \emph{Local model.} The chat model can run locally with Ollama
+        (\texttt{qwen3:4b-instruct}), so student data need not leave the
+        institution.
+\end{itemize}
+
+\paragraph{Evidence.} The off-topic question of \cref{sec-c4} was refused
+with the closest sections. For quiz generation on the four sections of
+the demo course (writer \texttt{openai/gpt-oss-20b} on Groq), the four
+quizzes were generated on the first attempt, 18 of the 20 drafted items
+(90\,\%) passed the validation in code, the median time was 3.1\,s per
+quiz, and the positions of the correct option were spread over the four
+letters (A/B/C/D = 4/3/5/6). Every distractor carried a misconception label. The
+mean Ragas faithfulness~\cite{es2024ragas} of the explanations was 0.54.
+This value mixes real factual slips with correct general knowledge that
+is not in the excerpts, and with false negatives when the material and
+the questions are in different languages. Faithfulness alone therefore
+cannot certify an item, which is why generated questions go through a
+teacher review (\cref{sec-c6}).
+
+\paragraph{Limits.} There is no separate verifier agent that checks every
+answer before delivery; it is future work. The rate of hallucinations
+cascading between agents is not measured yet.
+
+% =====================================================================
+\section{The teacher in the loop (C7)}
+\label{sec-c6}
+% =====================================================================
+
+\paragraph{Problem.} Teacher control is future work in ELA Tutor, limited
+to dashboards in IJACSA-Arch, absent in GenMentor and unimplemented in
+CA-MA-DRL (gap G6). The survey of LLMs for education calls for the
+instructor to act as a special agent of the system~\cite{wang2024llm4edu}.
+The faithfulness measured in \cref{sec-c5} also shows that generated
+questions must be checked by a human before they count.
+
+\paragraph{Proposal.} The teacher controls three things: a reviewed
+\emph{question bank}, \emph{objectives} for each section, and a
+\emph{class dashboard}.
+
+\paragraph{How it works.}
+\begin{itemize}
+  \item \emph{Question bank.} A quiz is filled from the bank first:
+        approved questions of the section, in the learner's language, that
+        this learner has never answered. Only the shortfall is generated
+        by the LLM. A per-course \emph{review mode} decides what happens to
+        generated questions: in \texttt{review} mode (the default) they
+        enter the bank as \emph{pending}, and the quiz is served only if
+        enough questions are approved; in \texttt{auto\_publish} mode they
+        are approved at once and used. The teacher can generate, edit,
+        approve or reject questions; an edit goes through the same checks
+        as an LLM draft, and every review is traced. A quiz item is a copy
+        of a bank question, so a later edit never changes a quiz already
+        taken or its BKT history.
+  \item \emph{Objectives.} For each section, the teacher sets a target
+        mastery and marks key sections. The Recommendation agent, the
+        readiness computed by the Context agent and the dashboard all read
+        these objectives; none of them copies them.
+  \item \emph{Class dashboard.} The Learning Analytics agent computes, from
+        the shared state of every enrolled student, a view per section
+        (learners assessed, mastered, mean mastery) and per student
+        (mastery, inactivity, current section, open suggestions and risk
+        flags). The risk flags reuse the trigger rules of
+        \cref{tab-triggers}, so ``at risk'' has one definition, plus a flag
+        for a key section below its target.
+\end{itemize}
+The life cycles of a bank question and of a material suggestion are shown
+in \cref{fig-states} (\cref{chap-implementation}).
+
+\paragraph{Evidence.} The flow was verified through the public API on the
+demo course, starting from an empty bank in \texttt{review} mode. A
+student's quiz was first refused with the code \texttt{awaiting\_review},
+while questions were written in the background for the teacher. The
+teacher edited one question, rejected one and approved three; an edit
+with duplicate options was refused. The student's next quiz was served
+from the approved questions without any LLM call, and never contained the
+rejected question. One of the generated questions claimed that
+\texttt{if}/\texttt{elif}/\texttt{else} branches are tested ``from the
+most restrictive to the least'', which the course does not say: exactly
+the kind of item the review exists to catch.
+
+\paragraph{Limits.} In \texttt{review} mode a learner may have to wait
+for the teacher; the teacher can fill the bank in advance. Rejecting a
+question that was already answered does not replay the BKT history.
+
+% =====================================================================
+\section{An evidence-based Material Improvement agent}
+\label{sec-c7}
+% =====================================================================
+
+\paragraph{Problem.} The systems reviewed help the learner, but none uses
+the learners' difficulties to point the teacher to the parts of the
+course that cause them. An LLM asked to ``critique the course'' would
+produce plausible but unverifiable advice (gaps G6 and G7).
+
+\paragraph{Proposal.} The Material Improvement agent goes beyond the
+contributions planned in the literature analysis. It applies the same
+principle as the other agents: \emph{code finds the problems with
+statistics, the LLM writes a draft, the teacher decides}. The app never
+writes to Moodle: the agent only suggests. It runs on demand, when the
+teacher clicks a button, because a scheduled run would waste the quota of
+a free-tier LLM.
+
+\paragraph{How it works.} \Cref{fig-material-pipeline} shows the
+pipeline. The evidence is loaded from the shared state: answers with the
+misconception label of each wrong option, the tutor's turns that the
+material could not answer, the reading time and mastery per section, and
+the activity views. Five detectors, written as pure functions of this
+evidence, raise issues; each issue carries its numbers, a severity and a
+stable key, so a new run never re-creates a rejected suggestion.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{material-pipeline}
+  \caption{The Material Improvement agent.}
+  \label{fig-material-pipeline}
+\end{figure}
+
+\begin{itemize}
+  \item \texttt{misconception}: a misconception chosen by at least 30\,\%
+        of the learners who answered the section, and more often than
+        chance among the wrong answers to the questions that offer it
+        (one-sided binomial test, $\alpha = 0.01$, Bonferroni correction
+        over the labels of the section);
+  \item \texttt{problem\_question}: a bank question with at least
+        8 answers and at most 25\,\% correct; a wrong option with
+        \emph{positive} discrimination against the rest score (chosen by
+        the learners who master the section) points to a wrong key;
+  \item \texttt{unanswered}: tutor questions the material could not
+        answer, grouped by meaning (cosine $\geq 0.70$ to the centroid of
+        the group) and asked by at least 2 learners;
+  \item \texttt{unclear\_section}: at least 40\,\% of the assessed
+        learners read the section for 5 minutes or more and stay below
+        0.5 mastery;
+  \item \texttt{skipped\_activity}: an activity opened by less than
+        30\,\% of the learners assessed on its section.
+\end{itemize}
+For each new issue, the LLM writes, from the evidence and the excerpts of
+the section, a diagnosis and a proposed change in the teacher's language,
+and a draft (a passage, an example or a corrected question) in the
+language of the material. A quoted passage that is not in the excerpts is
+dropped. Each suggestion is then \emph{pending}, \emph{accepted} or
+\emph{rejected}, and \emph{applied} once the teacher has changed the
+material in Moodle; every review is traced.
+
+\paragraph{Evidence.} The detectors were measured on simulated classes
+with planted flaws: 200 random classes for each size, with a confusing
+section, a content gap, a skipped activity and a question with a wrong
+key (\cref{tab-material-eval}). Precision is the share of raised issues
+that match a planted flaw.
+
+\begin{table}[htbp]
+\centering
+\caption{Material Improvement detectors on simulated classes (200 classes per size)}
+\label{tab-material-eval}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+& \textbf{10 learners} & \textbf{20 learners} & \textbf{40 learners} \\
+\midrule
+confusing section found & 70\,\% & 93\,\% & 100\,\% \\
+content gap found & 90\,\% & 100\,\% & 100\,\% \\
+skipped activity found & 94\,\% & 99\,\% & 100\,\% \\
+wrong answer key found and diagnosed & 40\,\% & 86\,\% & 96\,\% \\
+precision of raised issues & 89\,\% & 97\,\% & 100\,\% \\
+clean section wrongly flagged & 4\,\% & 2\,\% & 0\,\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These results come from a second version of the detectors. The first
+version reached a precision of only 32\,\% on classes of 10 learners and
+56\,\% on classes of 20: in a small class, three learners making the same
+mistake happens by chance. Three rules were changed after this
+measurement. The \texttt{misconception} detector now also requires the
+binomial test. The \texttt{problem\_question} detector no longer trusts
+one dominant wrong option, which is also what a strong misconception
+looks like; it uses item discrimination instead, which works even when
+nobody chose the key. The grouping threshold of unanswered questions was
+calibrated on bge-m3: each paraphrase of the planted gap is at least 0.74
+from the centroid of the others, and unrelated questions are at most 0.66
+apart. The detectors are now conservative on small classes, as intended:
+they miss more than they invent.
+
+The agent was then run live on the demo course with 20 simulated learners
+(426 answers through the Assessment agent). All four planted flaws were
+found in 1.5\,s, with no false positive. For the wrong key, only 6\,\% of
+the answers were correct, the discrimination of the key was $-0.20$, and
+the probable right answer was identified. The misconception ``\texttt{range(n)}
+includes \texttt{n}'' was shared by 15 of 19 learners ($p = 6 \cdot 10^{-8}$).
+The live run also found defects that the tests with fake models could not
+show, such as diagnoses written in the language of the excerpts instead
+of the teacher's language; they were fixed.
+
+\paragraph{Limits.} The thresholds are defaults for classes of 20 to 40
+learners; small classes produce no suggestion rather than noisy ones.
+Applying a change remains manual (in Moodle, followed by a new
+ingestion), and whether a change helped (mastery before and after) is left
+to the evaluation sprint.
+
+% =====================================================================
+\section{Moodle integration without modifying its core (C10)}
+\label{sec-c8}
+% =====================================================================
+
+\paragraph{Problem.} The closest system integrates Moodle through a
+low-code orchestration engine~\cite{lopezgoyez2026ela}; the most complete
+interoperable design, based on LTI 1.3 and xAPI, was not
+implemented~\cite{khaddar2026ijacsa} (gap G3). An institution will not
+adopt a framework that modifies the core of its LMS.
+
+\paragraph{Proposal.} Moodle is the LMS backend and is never modified.
+The API gateway is its only client and holds the only token. The
+integration is read-only: the framework never writes to Moodle. This
+contribution is \emph{partial}: the web services and the in-app reader are
+implemented, LTI 1.3 single sign-on is future work.
+
+\paragraph{How it works.} \Cref{fig-moodle-integration} shows the
+integration. The API reads Moodle through its REST web services (the
+functions are listed in the figure). Students read the course inside the
+app: a page is fetched with the service token and \emph{sanitised} in the
+API (an allow-list of tags and attributes, no scripts, styles or
+iframes); files are served through \emph{signed links}, an HMAC bound to
+the user, the file path and an expiry of one hour, because a browser
+cannot send a token for an image or an embedded PDF. Moodle's
+restrict-access conditions that require completing an activity are
+honoured for students; other conditions (dates, grades) are shown but not
+enforced, and teachers are never locked out.
+Views in the app are recorded in our database and counted as completion
+for the activities whose only Moodle completion rule is ``view''; this
+keeps the context of \cref{sec-c2} correct for a learner who never opens
+Moodle.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{moodle-integration}
+  \caption{Moodle as a read-only backend.}
+  \label{fig-moodle-integration}
+\end{figure}
+
+Writing completion back to Moodle was considered and rejected: the only
+web service for it is a teacher override, recorded as such in Moodle's
+reports, and it would break the read-only principle.
+
+\paragraph{Evidence.} In a live check, a lesson was served as sanitised
+HTML, a PDF of the course was streamed through a signed link, an activity
+locked by a restriction was returned as locked with Moodle's sentence, and
+after the lesson was viewed in the app, the next section was unlocked.
+Moodle itself still showed the lesson as not viewed, as intended. The API
+tests (80, with Vitest) replay recorded Moodle responses.
+
+\paragraph{Limits.} Without LTI 1.3 there is no single sign-on: the
+app's login is separate from Moodle's. Moodle's own quizzes and
+assignments still open in Moodle. Moodle's completion report does not show
+the views made in the app; our dashboard does.
+
+% =====================================================================
+\section{Multilingual support (C9)}
+\label{sec-c9}
+% =====================================================================
+
+\paragraph{Problem.} No reviewed system supports French or Arabic
+(gap G8), whereas Algerian universities teach in Arabic, French and
+English.
+
+\paragraph{Proposal and how it works.} The interface is bilingual
+(French and English, with react-i18next). The Tutor answers in the
+learner's language, quizzes are generated in the learner's language, and
+the course material can be in French or in English: the language of each
+document is detected at ingestion, and bge-m3 is a multilingual embedding
+model, so a question in one language can be compared with a passage in the
+other.
+The Material Improvement agent writes its diagnosis in the teacher's
+language and its draft in the language of the material.
+
+\paragraph{Status and limits.} This contribution is \emph{partial}:
+Arabic is future work. Mixing languages also affects the evaluation: the
+faithfulness metric produced false negatives when the material and the
+questions were in different languages (\cref{sec-c5}).
+
+% =====================================================================
+\section{Comparison with related work}
+\label{sec-c-compare}
+% =====================================================================
+
+\Cref{tab-related-compare} compares the framework with the four primary
+works of \cref{sec-related-work}, on the criteria of the gaps. The
+comparison of the other works uses only what their articles report; for
+this work, it uses the status of \cref{tab-gaps-contributions}.
+
+\begin{table}[htbp]
+\centering
+\caption[Comparison with related work]{Comparison with related work
+(\cyes: yes, \cpartly: partial or design only, \cno: no, n/r: not reported, n/a: not applicable)}
+\label{tab-related-compare}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{3.3cm}*{5}{>{\centering\arraybackslash}X}@{}}
+\toprule
+\textbf{Criterion} & \textbf{ELA Tutor} & \textbf{IJACSA-Arch} & \textbf{GenMentor} &
+  \textbf{CA-MA-DRL} & \textbf{This work} \\
+\midrule
+LLM agents & \cyes & \cpartly & \cyes & \cno & \cyes \\
+Explicit context model & \cpartly & \cpartly & \cpartly & \cpartly & \cyes \\
+Knowledge tracing & \cno & \cpartly & \cno & \cpartly & \cyes \\
+Proactive & \cno & \cpartly & \cno & \cpartly & \cyes \\
+Teacher control & \cpartly & \cpartly & \cno & \cpartly & \cyes \\
+Grounding with citations & \cpartly & \cpartly & n/r & n/a & \cyes \\
+Real LMS integration & \cyes & \cpartly & \cno & \cpartly & \cpartly \\
+Evaluation of learning & \cno & \cno & \cno & \cno & \cno \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\todonote{Check each cell of \cref{tab-related-compare} against Chapter 2
+once its related-work section is written. ``Partial'' for CA-MA-DRL means
+designed but not implemented; ``partial'' for this work's LMS integration
+means LTI 1.3 is pending.}
+
+Two lines of the table deserve a comment. The framework is the only one
+that combines an explicit context model with knowledge tracing behind LLM
+agents, and the only one with implemented proactive triggers and a
+reviewed question bank. On the other hand, like every other work, it has
+not yet measured a learning gain. The comparison therefore supports the
+claim of the framework on design and implementation, not yet on learning
+outcomes.
+
+% =====================================================================
+\section{Limits and conclusion}
+\label{sec-c-limits}
+% =====================================================================
+
+The framework has the following limits, which the defence must state
+plainly:
+\begin{itemize}
+  \item \emph{No measured learning gain} (gap G5 remains open). The
+        planned evaluation has three parts: an ablation with simulated
+        learners (the full framework, the same agents without the context
+        model, and a single LLM chatbot); a pilot with real students using
+        a pre-test and a post-test, a comparison group, the normalised
+        learning gain~\cite{hake1998gain} and the SUS
+        questionnaire~\cite{brooke1996sus}; and technical metrics (offline
+        BKT AUC, latency, cost, and the correctness of generated content
+        rated by teachers).
+  \item \emph{One demo course} and \emph{simulated classes}: the
+        thresholds and the detectors were measured on simulated learners,
+        not on real classes.
+  \item \emph{LTI 1.3} single sign-on and \emph{Arabic} support are
+        pending.
+  \item \emph{Cost and latency} of hosted LLMs: the free tier of the
+        provider shaped several choices (on-demand analysis, bank-first
+        quizzes), and retrieval dominates the waiting time because the
+        embeddings are computed on the CPU.
+\end{itemize}
+
+In summary, this work contributes a shared, versioned model of the
+learner and of the learner's context, maintained by a Context agent and
+fed by knowledge tracing; specialised agents that decide in code and
+write with an LLM, with every decision visible; grounding and guardrails
+checked in code; a teacher in the loop for generated questions and
+course objectives; an evidence-based Material Improvement agent whose
+detectors were measured and corrected; and an integration with Moodle
+that never modifies its core. The next chapter presents the design that
+implements these contributions.

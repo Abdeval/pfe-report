@@ -1,0 +1,41 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}[
+  ws/.style={rectangle, draw=pLms, fill=white, font=\scriptsize\ttfamily, inner sep=2.5pt,
+    minimum width=72mm, text width=69mm, align=left, anchor=west},
+  slbl/.style={font=\scriptsize, fill=white, inner sep=1.5pt, align=center}]
+  % ---------------------------------------------------------------- Moodle
+  \node[lms, minimum width=25mm, minimum height=48mm, align=center] (moodle) at (0,0)
+    {\textbf{Moodle 4.5 LTS}\\[2mm]\scriptsize courses, sections,\\\scriptsize activities, files,\\
+     \scriptsize completion, grades\\[3mm]\scriptsize core never modified};
+  % web services list
+  \node[ws] (w1) at (2.0, 2.0) {core\_course\_get\_contents};
+  \node[ws, below=1mm of w1] (w2) {core\_enrol\_get\_enrolled\_users};
+  \node[ws, below=1mm of w2] (w3) {core\_completion\_get\_activities\_completion\_status};
+  \node[ws, below=1mm of w3] (w4) {gradereport\_user\_get\_grade\_items};
+  \node[ws, below=1mm of w4] (w5) {mod\_quiz\_get\_user\_attempts};
+  \node[ws, below=1mm of w5] (w6) {files: webservice/pluginfile.php};
+  \begin{scope}[on background layer]
+    \node[layer={pLms}{Web services used (REST, token)}, fit=(w1)(w6), inner ysep=13pt] (WS) {};
+  \end{scope}
+  % ---------------------------------------------------------------- API
+  \node[api, minimum width=32mm, minimum height=26mm, align=center, very thick] (api) at (12.6, 0.4)
+    {\textbf{API gateway (NestJS)}\\[1mm]\scriptsize the only Moodle client\\\scriptsize holds the single token\\
+     \scriptsize sanitises page HTML\\\scriptsize signs file links (HMAC, 1\,h)};
+  \node[web, minimum width=32mm, align=center] (reader) at (12.6,-3.1)
+    {\textbf{In-app reader}\\\scriptsize pages, PDFs, images};
+  \actor{student}{12.6,-5.6}{Student}
+  \node[store, minimum width=30mm, font=\scriptsize] (db) at (6.4,-3.4)
+    {\textbf{activity\_view}\\views, reading seconds\\\texttt{enrolment.last\_access\_at}};
+  % ---------------------------------------------------------------- flows
+  \draw[call] (WS.east |- api) -- node[slbl] {GET (read-only)} (api.west);
+  \draw[call] (moodle.east |- WS) -- (WS.west);
+  \draw[call] (api) -- node[slbl] {sanitised HTML,\\signed URLs} (reader);
+  \draw[call] (student-c) ++(0,0.55) -- (reader.south);
+  \draw[rw] (reader.west) -- node[slbl, pos=0.45] {in-app views\\recorded} (db.east |- reader.west);
+  % forbidden write-back
+  \draw[forbid, very thick] (db.west) -| node[pos=0.25, font=\large\bfseries, text=pLms] {$\times$}
+     node[slbl, below=4pt, text=pLms, pos=0.25] {no write to Moodle} (moodle.south);
+\end{tikzpicture}
+\end{document}

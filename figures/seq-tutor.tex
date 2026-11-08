@@ -1,0 +1,54 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}
+\node[web, lifehead, minimum width=21mm, align=center] (h-st) at (0.00,0) {Student};
+\node[web, lifehead, minimum width=21mm, align=center] (h-web) at (2.35,0) {Web app};
+\node[api, lifehead, minimum width=21mm, align=center] (h-api) at (4.70,0) {API};
+\node[agent, lifehead, minimum width=21mm, align=center] (h-ag) at (7.05,0) {Agents\\[-1pt](graph)};
+\node[data, lifehead, minimum width=21mm, align=center] (h-ret) at (9.40,0) {Retriever\\[-1pt]pgvector};
+\node[ai, lifehead, minimum width=21mm, align=center] (h-llm) at (11.75,0) {LLM};
+\node[data, lifehead, minimum width=21mm, align=center] (h-ss) at (14.10,0) {StateStore};
+\draw[life] (h-st.south) -- (0.00,-17.03);
+\draw[life] (h-web.south) -- (2.35,-17.03);
+\draw[life] (h-api.south) -- (4.70,-17.03);
+\draw[life] (h-ag.south) -- (7.05,-17.03);
+\draw[life] (h-ret.south) -- (9.40,-17.03);
+\draw[life] (h-llm.south) -- (11.75,-17.03);
+\draw[life] (h-ss.south) -- (14.10,-17.03);
+\node[activation, minimum height=13.24cm, anchor=north] at (7.05,-2.66) {};
+\node[activation, minimum height=13.86cm, anchor=north] at (4.70,-2.04) {};
+\draw[msg] (0.00,-0.95) -- node[mlbl, above=0.5pt] {asks a question} (2.35,-0.95);
+\draw[msg] (2.35,-1.57) -- node[mlbl, above=0.5pt] {POST \texttt{/messages}} (4.70,-1.57);
+\draw[msg] (4.81,-2.19) -- node[mlbl, above=0.5pt] {proxy (HTTP + SSE)} (7.05,-2.19);
+\draw[msg] (7.16,-2.81) -- node[mlbl, above=0.5pt] {\texttt{load\_turn\_context}} (14.10,-2.81);
+\draw[reply] (14.10,-3.43) -- node[mlbl, above=0.5pt] {state + version} (7.16,-3.43);
+\draw[msg] (7.16,-3.93) -- ++(0.45,0) -- ++(0,-0.32) -- (7.16,-4.25);
+\node[mlbl, anchor=west, fill=none, align=left] at (7.66,-4.09) {\texttt{classify} (rules first)};
+\draw[sse] (6.94,-4.79) -- node[mlbl, above=0.5pt] {step \texttt{classify}} (2.35,-4.79);
+\draw[msg] (7.16,-5.41) -- node[mlbl, above=0.5pt] {retrieve (hybrid, top 6)} (9.40,-5.41);
+\draw[reply] (9.40,-6.03) -- node[mlbl, above=0.5pt] {passages, similarity} (7.16,-6.03);
+\draw[sse] (6.94,-6.65) -- node[mlbl, above=0.5pt] {step \texttt{retrieve}} (2.35,-6.65);
+\node[font=\scriptsize\itshape, anchor=north west, fill=white, inner sep=1pt] at (1.85,-7.42) {[best similarity $\geq$ threshold]};
+\draw[msg] (7.16,-8.05) -- ++(0.45,0) -- ++(0,-0.32) -- (7.16,-8.37);
+\node[mlbl, anchor=west, fill=none, align=left] at (7.66,-8.21) {\texttt{adapt} (mastery, context)};
+\draw[sse] (6.94,-8.91) -- node[mlbl, above=0.5pt] {step \texttt{adapt}} (2.35,-8.91);
+\draw[msg] (7.16,-9.53) -- node[mlbl, above=0.5pt] {generate (passages, level)} (11.75,-9.53);
+\draw[reply] (11.75,-10.15) -- node[mlbl, above=0.5pt] {tokens (streamed)} (7.16,-10.15);
+\draw[sse] (6.94,-10.77) -- node[mlbl, above=0.5pt] {\texttt{token} events} (2.35,-10.77);
+\draw[msg] (7.16,-11.27) -- ++(0.45,0) -- ++(0,-0.32) -- (7.16,-11.59);
+\node[mlbl, anchor=west, fill=none, align=left] at (7.66,-11.43) {validate the citations};
+\draw[frag, dashed] (1.30,-12.01) -- (15.15,-12.01);
+\node[font=\scriptsize\itshape, anchor=north west, fill=white, inner sep=1pt] at (1.40,-12.06) {[below the threshold]};
+\draw[msg] (7.16,-12.67) -- ++(0.45,0) -- ++(0,-0.32) -- (7.16,-12.99);
+\node[mlbl, anchor=west, fill=none, align=left] at (7.66,-12.83) {\texttt{not\_found}: closest sections};
+\draw[sse] (6.94,-13.53) -- node[mlbl, above=0.5pt] {step \texttt{not\_found}} (2.35,-13.53);
+\draw[frag] (1.30,-7.39) rectangle (15.15,-14.00);
+\node[fraglbl] at (1.30,-7.39) {alt};
+\draw[msg] (7.16,-14.35) -- node[mlbl, above=0.5pt] {\texttt{commit\_turn}: messages, steps, snapshot} (14.10,-14.35);
+\draw[reply] (14.10,-14.97) -- node[mlbl, above=0.5pt] {committed (one transaction)} (7.16,-14.97);
+\draw[sse] (6.94,-15.59) -- node[mlbl, above=0.5pt] {\texttt{citations}, \texttt{done}} (2.35,-15.59);
+\draw[reply] (2.35,-16.21) -- node[mlbl, above=0.5pt] {answer, steps, sources} (0.00,-16.21);
+\node[note, text=pInk, anchor=north west] at (-1.00,-17.28) {\tikz[baseline=-0.5ex]\draw[msg] (0,0) -- (0.5,0); call \quad \tikz[baseline=-0.5ex]\draw[reply] (0,0) -- (0.5,0); reply \quad \tikz[baseline=-0.5ex]\draw[sse] (0,0) -- (0.5,0); server-sent event (through the API)};
+\end{tikzpicture}
+\end{document}

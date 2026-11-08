@@ -1,0 +1,759 @@
+% =====================================================================
+%  Chapter 1: Digital educational systems and learning management
+%             systems (LMS)
+% =====================================================================
+\chapter{Digital Educational Systems and Learning Management Systems}
+\label{chap-lms}
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+Higher education now relies on digital environments that organize the
+delivery of courses, the exchanges between participants and the monitoring
+of learners. At the centre of these environments are learning management
+systems (LMSs), which have become the basic infrastructure of most
+institutions \cite{dahlstrom2014,coates2005}. Our work aims to extend such
+a system with a multi-agent framework able to adapt learning to each
+learner and to their context. Before presenting this contribution, we need
+to understand what LMSs do, how they are built and why, on their own, they
+cannot personalize learning.
+
+This chapter first defines online learning and its modalities
+(\cref{sec-elearning}). It then presents LMSs, their functions and their
+general architecture (\cref{sec-lms}), followed by the standards that let
+them communicate with other tools (\cref{sec-standards}). It compares the
+main platforms on the market (\cref{sec-overview}) and studies Moodle in
+detail, since it is the platform chosen to integrate our framework
+(\cref{sec-moodle}). It ends with an analysis of the limits of current
+LMSs with respect to adaptive and personalized learning
+(\cref{sec-limits}).
+
+% =====================================================================
+\section{Online learning}
+\label{sec-elearning}
+% =====================================================================
+
+\subsection{Definitions}
+
+The term \foreign{e-learning} covers many realities, and the literature
+often uses it interchangeably with distance education or online learning.
+\citet{moore2011} show that these terms are not equivalent: distance
+education refers first of all to the physical separation between teacher
+and learner, whereas online learning refers to the use of the Internet to
+access content and interactions, whether or not the learner is remote.
+
+\begin{definitionbox}{Online learning}
+We call \emph{online learning} (or \foreign{e-learning}) any learning
+situation in which content, activities, interactions or assessment are
+mediated by a connected digital system, in particular a web platform
+\cite{clark2016,moore2011}.
+\end{definitionbox}
+
+The broader term \emph{technology-enhanced learning environment} refers to
+any computer system designed to support human learning. An LMS is a
+particular case of such an environment: it focuses on organizing and
+managing teaching rather than on fine-grained pedagogical interaction with
+each learner.
+
+\subsection{Evolution of distance education}
+
+Distance education has gone through several generations, each tied to a
+dominant communication technology. \citet{taylor2001} identifies five, from
+correspondence teaching to automated, interactive online environments.
+\Cref{fig-generations} extends this view up to current systems that
+integrate generative artificial intelligence.
+
+\begin{figure}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tikzpicture}[
+  gen/.style={bloc,text width=2.35cm,minimum height=2.1cm,font=\footnotesize},
+  genai/.style={blocstrong,text width=2.35cm,minimum height=2.1cm,font=\footnotesize\bfseries},
+  node distance=0.35cm]
+  \node[gen]   (g1) {\textbf{Corres\-pondence}\\[2pt]print, postal mail};
+  \node[gen,right=of g1]   (g2) {\textbf{Multimedia}\\[2pt]radio, television, cassettes};
+  \node[gen,right=of g2]   (g3) {\textbf{Tele-learning}\\[2pt]video and audio conferencing};
+  \node[gen,right=of g3]   (g4) {\textbf{Online learning}\\[2pt]web, LMS, forums};
+  \node[gen,right=of g4]   (g5) {\textbf{Open platforms}\\[2pt]MOOCs, mobile, analytics};
+  \node[genai,right=of g5] (g6) {\textbf{AI-augmented platforms}\\[2pt]LLMs, agents, adaptation};
+  \draw[arrow] ([yshift=-1.5cm]g1.west) -- ([yshift=-1.5cm]g6.east)
+     node[pos=0,below right,font=\footnotesize,text=thgray]{more interaction, finer monitoring}
+     node[pos=1,below left,font=\footnotesize,text=thgray]{time};
+\end{tikzpicture}}
+\caption[Generations of distance education]{Generations of distance
+education, after \citet{taylor2001} and Moore and Kearsley~\cite{moore2012},
+extended with AI-augmented platforms.}
+\label{fig-generations}
+\end{figure}
+
+\subsection{Learning modalities}
+
+Learning arrangements differ along two axes: the share of face-to-face
+teaching and the synchronicity of exchanges \cite{moore2012}.
+
+\begin{itemize}
+  \item \textbf{Web-enhanced face-to-face}: classes take place in a
+        classroom, and the platform is used to share resources and to
+        monitor progress.
+  \item \textbf{Blended}: part of the activities takes place online and
+        replaces part of the face-to-face teaching. Garrison and
+        Kanuka~\cite{garrison2004} stress that this modality requires
+        rethinking course design and cannot be reduced to adding digital
+        resources.
+  \item \textbf{Fully online}: all activities are mediated by the platform.
+  \item \textbf{Synchronous or asynchronous}: exchanges happen in real
+        time (virtual classroom) or at different times (forum, assignment,
+        quiz).
+\end{itemize}
+
+In Algeria, the Covid-19 pandemic forced universities to move quickly to
+distance teaching in 2020. They relied on several tools, including Moodle,
+Google Classroom and videoconferencing services \cite{kerrouzi2023}. Since
+then, blended teaching has become established in many institutions, and
+Moodle has remained the most widespread institutional platform.
+
+\subsection{Stakeholders in online learning}
+\label{subsec-stakeholders}
+
+Four categories of stakeholders interact in an online learning
+arrangement (\cref{tab-stakeholders}). They will reappear in the design of
+our framework (\cref{chap-contribution}).
+
+\begin{table}[htbp]
+\centering
+\caption{Stakeholders in online learning and their needs}
+\label{tab-stakeholders}
+\begin{tabularx}{\textwidth}{@{}L{2.8cm}YY@{}}
+\toprule
+\textbf{Stakeholder} & \textbf{Role} & \textbf{Main needs} \\
+\midrule
+Learner & Follows courses, completes activities and assessments &
+  A path adapted to their level, explanations, quick feedback, help
+  organizing their work \\
+Teacher & Designs the course, leads it, assesses learners &
+  Time savings, an overview of class progress, early detection of
+  difficulties, better course materials \\
+Academic administrator & Organizes courses and programmes &
+  Aggregated indicators, programme quality and consistency, detection of
+  students at risk \\
+Technical administrator & Installs and maintains the platform &
+  Security, performance, integration with the information system,
+  control over data \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =====================================================================
+\section{Learning management systems}
+\label{sec-lms}
+% =====================================================================
+
+\subsection{Definition}
+
+\begin{definitionbox}{LMS}
+A \emph{learning management system} (LMS) is an application, usually
+web-based, used to administer, deliver, track and assess learning
+activities. It manages users, courses, enrolments, resources, activities,
+grades and communication between participants \cite{watson2007,ellis2009}.
+\end{definitionbox}
+
+Watson and Watson~\cite{watson2007} point out the frequent confusion
+between LMSs and neighbouring systems. \Cref{tab-lms-neighbours} clarifies
+these distinctions, which help us state precisely the role of the platform
+in our architecture.
+
+\begin{table}[htbp]
+\centering
+\caption{LMSs and neighbouring systems}
+\label{tab-lms-neighbours}
+\begin{tabularx}{\textwidth}{@{}L{3.2cm}YY@{}}
+\toprule
+\textbf{System} & \textbf{Main function} & \textbf{Difference from an LMS} \\
+\midrule
+LMS & Manage teaching: users, courses, activities, grades, tracking &
+  Reference \\
+LCMS (\foreign{Learning Content Management System}) & Author, store and
+  reuse learning content & Focused on content rather than on organizing
+  and tracking learners \\
+VLE (\foreign{Virtual Learning Environment}) & Provide an online course
+  space & Mostly British term, often a synonym of LMS in higher
+  education \\
+MOOC platform & Deliver open courses to very large numbers of learners &
+  Open enrolment, little individual support, heavily automated
+  assessment \\
+Intelligent tutoring system (ITS) & Guide the learner step by step through
+  problem solving & Detailed learner and domain models, but limited to one
+  domain \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Functions}
+
+The functions of an LMS fall into six groups \cite{ellis2009,dobre2015}:
+
+\begin{enumerate}
+  \item \textbf{User and role management}: accounts, authentication, roles
+        (learner, teacher, manager) and their permissions.
+  \item \textbf{Course management}: course creation, organization into
+        sections, enrolments, groups, calendar.
+  \item \textbf{Content delivery}: files, pages, videos, SCORM or H5P
+        packages, links to external resources.
+  \item \textbf{Activities and assessment}: assignments, quizzes, forums,
+        peer-assessment workshops, gradebook, competencies.
+  \item \textbf{Communication and collaboration}: messaging,
+        announcements, forums, wikis, virtual classrooms.
+  \item \textbf{Tracking and reporting}: activity logs, activity
+        completion, participation reports, dashboards.
+\end{enumerate}
+
+In recent years, learning analytics modules have been added to these core
+functions. Learning analytics is the collection and analysis of learners'
+traces in order to understand and improve learning \cite{siemens2011}.
+The first generative AI tools have also appeared
+(\cref{subsec-moodle-ai}).
+
+\subsection{General architecture}
+\label{subsec-lms-architecture}
+
+Most LMSs follow a layered web architecture, shown in
+\cref{fig-lms-architecture}. A presentation layer (web browser, mobile
+app) communicates with an application server that holds the business
+logic. The server relies on a relational database and on a file store. An
+integration layer exposes web services and implements the interoperability
+standards, which connects the LMS to the institution's information system
+and to external tools. Our framework will use this integration layer.
+
+\begin{figure}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tikzpicture}[node distance=0.45cm and 0.45cm,
+  b/.style={bloc,text width=2.6cm,minimum height=0.95cm}]
+  % Presentation
+  \node[b] (nav) {Web browser};
+  \node[b,right=of nav] (mob) {Mobile app};
+  \node[b,right=of mob] (ext) {External tools};
+  \node[layer,fit=(nav)(mob)(ext),
+        label={[font=\footnotesize\bfseries,text=thaccent]left:Presentation}] (cP) {};
+  % Application
+  \node[b,below=1.3cm of nav] (u) {Users, roles, permissions};
+  \node[b,right=of u] (c) {Courses, activities, assessment};
+  \node[b,right=of c] (s) {Tracking, logs, reports};
+  \node[layer,fit=(u)(c)(s),
+        label={[font=\footnotesize\bfseries,text=thaccent]left:Application}] (cA) {};
+  % Integration (right)
+  \node[blocstrong,text width=2.8cm,minimum height=3.2cm,right=1.1cm of s,
+        yshift=0.9cm] (int) {Web services\\REST API\\LTI, xAPI,\\SCORM, QTI};
+  % Data
+  \node[b,below=1.3cm of u] (db) {Relational database};
+  \node[b,right=of db] (fs) {File storage};
+  \node[b,right=of fs] (lg) {Event logs};
+  \node[layer,fit=(db)(fs)(lg),
+        label={[font=\footnotesize\bfseries,text=thaccent]left:Data}] (cD) {};
+  \draw[arrow,<->] (cP.south) -- (cA.north);
+  \draw[arrow,<->] (cA.south) -- (cD.north);
+  \draw[arrow,<->] (cA.east) -- (int.west |- cA.east);
+  \draw[arrow,<->] (ext.east) -| (int.north);
+\end{tikzpicture}}
+\caption{Layered architecture of an LMS}
+\label{fig-lms-architecture}
+\end{figure}
+
+\subsection{Licensing and deployment models}
+
+From an institution's point of view, two criteria distinguish LMSs:
+
+\begin{itemize}
+  \item \textbf{Licence}: open-source LMSs (Moodle, Open edX, Chamilo,
+        Sakai) can be installed, studied and modified without licence
+        fees; proprietary LMSs (Blackboard Learn, D2L Brightspace) are
+        provided under contract. Canvas sits in between: its core code is
+        open, but it is mostly used as a service hosted by its vendor.
+  \item \textbf{Deployment}: the institution can host the platform on its
+        own servers, which gives it control over the data, or use it as
+        Software as a Service (SaaS), which reduces the operating burden
+        but places the data with a provider.
+\end{itemize}
+
+For a research project that must read learning traces and add external
+services, an open-source, self-hosted platform gives full access to the
+data and to the extension points.
+
+% =====================================================================
+\section{Interoperability standards}
+\label{sec-standards}
+% =====================================================================
+
+An LMS never works alone. It must import content produced elsewhere,
+launch external tools, exchange grades and send activity traces. Open
+standards govern these exchanges. They are published mainly by the
+Advanced Distributed Learning (ADL) initiative, by the 1EdTech consortium
+(formerly IMS Global Learning Consortium) and by the IEEE.
+
+\subsection{SCORM}
+
+SCORM (\foreign{Sharable Content Object Reference Model}) defines how to
+package learning content and how this content communicates with the LMS
+that launches it, for example to report a score or a completion status
+\cite{adl_scorm}. Its latest version, SCORM 2004 4th Edition, dates from
+2009. SCORM is still very widespread, but it assumes that the content runs
+in the browser, inside the LMS, and it describes only a limited amount of
+information about the learner.
+
+\subsection{xAPI and cmi5}
+
+The Experience API (xAPI) removes these limits. It describes each learning
+experience as an \enquote{actor, verb, object} statement, enriched with a
+result and a context, and stored in a dedicated repository called a
+Learning Record Store (LRS). A statement can come from an LMS, a mobile
+app, a simulator or any other source. After several years of
+standardization, xAPI became the IEEE 9274.1.1-2023 standard, sometimes
+called xAPI 2.0 \cite{ieee_xapi,adl_xapi2023}.
+
+The cmi5 specification is an xAPI profile that sets the rules for
+launching content from an LMS and the vocabulary of the statements. It
+thus covers what SCORM did, on top of xAPI \cite{adl_cmi5}.
+
+The \texttt{context} field of xAPI statements is directly relevant to our
+work: it carries information about the learning situation (instructor,
+group, platform, parent activity) that can feed a context model.
+
+\subsection{LTI}
+
+The 1EdTech LTI standard (\foreign{Learning Tools Interoperability}) lets
+an LMS, called the \emph{platform}, launch an external application, called
+the \emph{tool}, while securely passing on the user's identity, role and
+originating course \cite{lti13}. Version 1.3, published in 2019, relies on
+OAuth~2.0 and OpenID Connect with signed tokens (JWT). It is complemented
+by the LTI Advantage services: sending grades back to the gradebook
+(\foreign{Assignment and Grade Services}), accessing the list of
+participants (\foreign{Names and Role Provisioning Services}) and
+selecting content (\foreign{Deep Linking}).
+
+LTI 1.3 is the most suitable standard for our framework: it embeds an
+external interface in a Moodle course without modifying the core of the
+platform, while passing on the launch context.
+
+\subsection{QTI}
+
+The QTI standard (\foreign{Question and Test Interoperability}) describes
+questions and tests in an XML format so that they can be exchanged between
+platforms \cite{qti3}. It matters for our work because questions generated
+by an assessment agent will have to be imported into a question bank.
+
+\subsection{Comparative summary}
+
+\Cref{tab-standards} compares these standards by role and by their
+relevance to an external adaptive learning framework.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of LMS interoperability standards}
+\label{tab-standards}
+\small
+\begin{tabularx}{\textwidth}{@{}L{1.9cm}L{2cm}YY@{}}
+\toprule
+\textbf{Standard} & \textbf{Body} & \textbf{Role} & \textbf{Relevance to our framework} \\
+\midrule
+SCORM 2004 & ADL & Package content and track its completion in the LMS &
+  Low: little information about the learner \\
+xAPI (IEEE 9274.1.1) & ADL, IEEE & Record varied learning experiences in
+  an LRS & High: rich traces with a context field \\
+cmi5 & ADL & Launch content from an LMS on top of xAPI &
+  Medium: useful if generated content is delivered as packages \\
+LTI 1.3 and Advantage & 1EdTech & Launch an external tool securely, return
+  grades & High: embeds the framework's interface in Moodle \\
+QTI 3.0 & 1EdTech & Exchange questions and tests &
+  Medium: export of generated questions \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =====================================================================
+\section{Overview of the main LMSs}
+\label{sec-overview}
+% =====================================================================
+
+A small number of platforms dominate the LMS market. In North America,
+Canvas, D2L Brightspace, Blackboard Learn and Moodle have held the top four
+places for some fifteen years. At the end of 2024, measured by student
+enrolment, Canvas held 50\,\% of the market, ahead of Brightspace
+(20\,\%), Blackboard (12\,\%) and Moodle (9\,\%) \cite{onedtech2024}.
+Almost all new contracts go to Canvas and Brightspace, while Moodle and
+Blackboard are slowly declining in the United States
+\cite{edutechnica2025}. The picture is very different worldwide: Moodle
+has more than 160,000 registered sites in 242 countries and more than 400
+million user accounts, and these figures only cover sites that register
+voluntarily \cite{moodle_stats}. The most represented countries are Spain,
+the United States, Germany, Mexico and Brazil.
+
+\subsection{The platforms}
+
+\paragraph{Moodle.} Open-source platform written in PHP, created by Martin
+Dougiamas and released in 2002 \cite{dougiamas2003}. It is grounded in a
+social constructivist approach and built around plugins. It is studied in
+detail in \cref{sec-moodle}.
+
+\paragraph{Canvas LMS.} Developed by Instructure, founded in 2008. Canvas
+is valued for its modern interface and its web-service-oriented design. It
+is now the most used platform in North American higher education
+\cite{onedtech2024}.
+
+\paragraph{Blackboard Learn.} The market pioneer, founded in 1997 and now
+published by Anthology. The platform offers two experiences,
+\enquote{Original} and \enquote{Ultra}, and has been losing market share
+for several years \cite{edutechnica2025}.
+
+\paragraph{D2L Brightspace.} Proprietary platform from the Canadian
+company D2L, founded in 1999. It emphasizes accessibility,
+competency-based learning and analytics.
+
+\paragraph{Open edX.} Open-source platform from the edX project of MIT and
+Harvard, opened in 2013. It is designed for massive open online courses
+(MOOCs) rather than for managing a full university curriculum.
+
+\paragraph{Google Classroom.} Online service launched by Google in 2014
+and integrated into Google Workspace. It is easy to adopt and covers the
+distribution of assignments and communication, but it remains limited in
+advanced assessment, tracking and personalization.
+
+\paragraph{Chamilo.} Open-source LMS launched in 2010, widely used in the
+Spanish- and French-speaking worlds. It is lighter than Moodle and targets
+organizations that favour simplicity.
+
+\subsection{Comparison}
+
+\Cref{tab-lms-comparison} compares these platforms against the criteria
+that matter for our project: open code, self-hosting, extensibility,
+support for standards, access to traces and built-in AI tools.
+
+\begin{table}[htbp]
+\centering
+\caption[Comparison of the main LMSs]{Comparison of the main LMSs against
+criteria relevant to integrating an external framework (\cyes: yes,
+\cpartly: partly, \cno: no)}
+\label{tab-lms-comparison}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.4cm}C{1.3cm}C{1.4cm}C{1.3cm}C{1.3cm}C{1.4cm}Y@{}}
+\toprule
+\textbf{LMS} & \textbf{Open code} & \textbf{Self-hosting} & \textbf{REST API} &
+  \textbf{LTI 1.3} & \textbf{Access to traces} & \textbf{Main audience} \\
+\midrule
+Moodle          & \cyes    & \cyes    & \cyes    & \cyes    & \cyes    & Universities, schools, companies \\
+Canvas LMS      & \cpartly & \cpartly & \cyes    & \cyes    & \cpartly & Higher education \\
+Blackboard Learn& \cno     & \cpartly & \cyes    & \cyes    & \cpartly & Higher education \\
+D2L Brightspace & \cno     & \cno     & \cyes    & \cyes    & \cpartly & Higher and continuing education \\
+Open edX        & \cyes    & \cyes    & \cyes    & \cyes    & \cyes    & MOOCs \\
+Google Classroom& \cno     & \cno     & \cyes    & \cpartly & \cno     & Schools, small groups \\
+Chamilo         & \cyes    & \cyes    & \cpartly & \cpartly & \cpartly & Organizations, training \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\todonote{Check the \cpartly{} cells of the table against each platform's
+official documentation before submission.}
+
+Moodle is the only platform that combines fully open code, self-hosting,
+full access to logs and complete support for the standards. It is also the
+platform already in place in most Algerian universities. These two reasons
+justify choosing it as the integration and validation platform for our
+framework.
+
+% =====================================================================
+\section{A detailed study of Moodle}
+\label{sec-moodle}
+% =====================================================================
+
+\subsection{History and versions}
+
+Moodle (\foreign{Modular Object-Oriented Dynamic Learning Environment})
+grew out of Martin Dougiamas's doctoral work, which sought a platform that
+fosters the collective construction of knowledge \cite{dougiamas2003}.
+Version 1.0 was released in 2002. The project is now led by Moodle Pty Ltd
+(Moodle HQ), together with a large community of developers and partners.
+
+Moodle publishes two major releases per year. Some releases receive
+long-term support (LTS): this is the case of Moodle 4.5, released in
+October 2024 and supported until October 2027. The 5.x branch followed
+from 2025 \cite{moodle_versions}. Both points matter for a final-year
+project: the version used must include the AI subsystem (introduced in
+4.5) and remain supported for the whole duration of the project.
+
+\subsection{Technical architecture}
+
+Moodle is a web application written in PHP. It relies on a relational
+database (PostgreSQL, MySQL, MariaDB or Microsoft SQL Server) and
+on a data directory (\texttt{moodledata}) that holds uploaded files, caches and
+sessions. The whole platform is organized as \emph{plugins}: the core
+provides shared services, and each visible feature is a plugin of a given
+type. \Cref{tab-moodle-plugins} lists the plugin types most useful for our
+project.
+
+\begin{table}[htbp]
+\centering
+\caption{Main Moodle plugin types and their use in our project}
+\label{tab-moodle-plugins}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}L{2.6cm}Y@{}}
+\toprule
+\textbf{Type} & \textbf{Prefix} & \textbf{Possible use in our project} \\
+\midrule
+Activity        & \texttt{mod}          & Activity dedicated to the tutor or to the adaptive path \\
+Block           & \texttt{block}        & Recommendations shown on the course page \\
+Local plugin    & \texttt{local}        & Event observers, additional web services \\
+Question type   & \texttt{qtype}        & Questions generated and graded by an agent \\
+Report          & \texttt{report}       & Dashboards for the teacher \\
+AI provider     & \texttt{aiprovider}   & Connecting the AI subsystem to a chosen model \\
+AI placement    & \texttt{aiplacement}  & New place in the interface where AI is offered \\
+Log store       & \texttt{logstore}     & Exporting events to an LRS (xAPI) \\
+Theme           & \texttt{theme}        & Look and feel of the platform \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Roles, permissions and contexts}
+
+Moodle controls access through roles (manager, teacher, non-editing
+teacher, student, guest) and capabilities, that is, elementary
+permissions. A role is always assigned in a \emph{context}. Contexts form a
+hierarchy: system, course category, course, activity module, block and
+user \cite{moodle_contexts}. A teacher can therefore have rights in one
+course and not in another.
+
+This notion of context is organizational: it tells where the user is in
+the structure of the platform. It differs from the learning context that
+our framework must model (the learner's level, goals, history, time
+constraints, device), which will be defined in \cref{chap-sota}. It is
+still a usable source of information, and it imposes a constraint: the
+framework must only access the data authorized in the context of the
+request.
+
+\subsection{Integration points}
+\label{subsec-moodle-integration}
+
+Moodle offers four mechanisms for exchanging data with an external service
+without modifying its core. They are summarized in
+\cref{fig-moodle-integration}.
+
+\begin{itemize}
+  \item \textbf{Web services.} Moodle exposes several hundred functions
+        (reading courses, contents, grades and completions, creating
+        questions, etc.). An external service calls them through REST with
+        a token tied to an account and to a set of allowed functions
+        \cite{moodle_ws}.
+  \item \textbf{Events and logs.} Every significant action (viewing a
+        resource, submitting an assignment, attempting a quiz) triggers an
+        event. Events are recorded in the logs and can be caught by
+        observers written in a plugin \cite{moodle_events}. They are the
+        main source of the traces that will feed the learner model.
+  \item \textbf{LTI.} Moodle can act as an LTI platform and launch an
+        external tool from a course, or publish its own activities as a
+        tool for other platforms. Version 1.3 and the LTI Advantage
+        services are supported.
+  \item \textbf{AI subsystem.} It connects language model providers and
+        offers AI actions in the interface (\cref{subsec-moodle-ai}).
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tikzpicture}[node distance=0.5cm and 1.6cm,
+  b/.style={bloc,text width=3.4cm,minimum height=0.9cm}]
+  \node[blocstrong,text width=3.4cm,minimum height=5.6cm] (moodle)
+     {Moodle\\[4pt]\mdseries\footnotesize unmodified core\\ database\\ moodledata};
+  \node[b,right=of moodle,yshift=2.1cm] (ws)  {REST web services};
+  \node[b,below=of ws]                  (ev)  {Events and logs};
+  \node[b,below=of ev]                  (lti) {LTI 1.3 and Advantage};
+  \node[b,below=of lti]                 (ai)  {AI subsystem};
+  \node[bloc,fill=white,draw=thaccent,text width=3.2cm,minimum height=5.6cm,
+        right=1.6cm of ev.east,yshift=-0.7cm] (svc)
+     {\textbf{External service}\\[4pt]\footnotesize
+      reads courses, grades and traces; interface embedded in the
+      course; calls language models};
+  \foreach \n in {ws,ev,lti,ai}{
+    \draw[arrow,<->] (moodle.east |- \n.west) -- (\n.west);
+    \draw[arrow,<->] (\n.east) -- (svc.west |- \n.east);
+  }
+\end{tikzpicture}}
+\caption{Moodle's integration points with an external service}
+\label{fig-moodle-integration}
+\end{figure}
+
+\subsection{Adaptation tools available in Moodle}
+\label{subsec-moodle-adaptation}
+
+Moodle already offers several ways to adapt a course, all based on rules
+written by hand by the teacher:
+
+\begin{itemize}
+  \item \textbf{Activity completion}: an activity is marked as complete
+        according to criteria (viewed, minimum grade, submitted).
+  \item \textbf{Restrict access}: a resource is only shown when conditions
+        are met (date, grade obtained, completion of another activity,
+        group membership).
+  \item \textbf{Competencies and learning plans}: the teacher links
+        competencies to activities and tracks how they are acquired.
+  \item \textbf{Lesson and interactive quiz}: the Lesson activity branches
+        according to the answers, and the quiz can run in interactive mode
+        with several tries.
+  \item \textbf{Analytics}: prediction models, such as identifying
+        students at risk of dropping out, use the logs to alert the
+        teacher \cite{moodle_analytics}.
+\end{itemize}
+
+These tools support branching adaptation, in the sense of adaptive
+hypermedia \cite{brusilovsky2001}, but the teacher has to plan every path
+in advance. The number of rules grows quickly with the number of
+activities and learner profiles.
+
+\subsection{The artificial intelligence subsystem}
+\label{subsec-moodle-ai}
+
+Since version 4.5, Moodle includes an AI subsystem in its core
+\cite{moodle45,moodle_ai}. It is organized around three notions,
+illustrated in \cref{fig-moodle-ai}:
+
+\begin{itemize}
+  \item \textbf{placements}: the places in the interface where users access
+        AI, by default the text editor and course assistance;
+  \item \textbf{actions}: what the AI can do, for example generate text or
+        an image, summarize or explain content;
+  \item \textbf{providers}: the language model services that carry out the
+        actions, such as OpenAI or Azure AI, but also locally hosted models
+        through Ollama \cite{moodle_ai}. A DeepSeek provider was added in
+        Moodle 5.1 \cite{eledia2026}.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tikzpicture}[node distance=0.35cm and 1.3cm,
+  b/.style={bloc,text width=3cm,minimum height=0.8cm}]
+  \node[b] (p1) {Text editor};
+  \node[b,below=of p1] (p2) {Course assistance};
+  \node[layer,fit=(p1)(p2),label={[font=\footnotesize\bfseries,text=thaccent]above:Placements}] (P) {};
+  \node[b,right=of p1,yshift=0.6cm] (a1) {Generate text};
+  \node[b,below=of a1] (a2) {Generate an image};
+  \node[b,below=of a2] (a3) {Summarize, explain};
+  \node[layer,fit=(a1)(a3),label={[font=\footnotesize\bfseries,text=thaccent]above:Actions}] (A) {};
+  \node[b,right=of a1] (f1) {OpenAI};
+  \node[b,below=of f1] (f2) {Azure AI};
+  \node[b,below=of f2] (f3) {Ollama, others};
+  \node[layer,fit=(f1)(f3),label={[font=\footnotesize\bfseries,text=thaccent]above:Providers}] (F) {};
+  \draw[arrow] (P.east) -- (A.west |- P.east);
+  \draw[arrow] (A.east) -- (F.west);
+  \node[below=0.5cm of A,font=\footnotesize,text=thgray,text width=11cm,align=center]
+    {Configured by the administrator: activation, usage limits, system
+     instructions; requests are logged};
+\end{tikzpicture}}
+\caption{Organization of Moodle's AI subsystem}
+\label{fig-moodle-ai}
+\end{figure}
+
+Everything is disabled by default. The administrator chooses the allowed
+providers, placements and actions, sets usage limits and can define a
+system instruction added to every request. Usage is logged. This design
+follows the AI principles published by Moodle, which put institutional
+control and transparency first.
+
+The subsystem is a solid foundation, but its role remains limited. It
+handles isolated requests, with no memory of the learner's path. It does
+not build a learner model, does not take the learner's context into
+account, does not plan a learning path and does not coordinate several
+specialized processes. Nor does it give teachers an analysis of their
+materials based on the difficulties observed. These gaps match exactly the
+scope of our framework.
+
+% =====================================================================
+\section{Limits of LMSs for adaptive learning}
+\label{sec-limits}
+% =====================================================================
+
+LMSs were designed to organize teaching, not to support each learner.
+\citet{coates2005} already observed that their use tends to reproduce
+transmissive, uniform teaching. EDUCAUSE reports point the same way: users
+mostly rely on the basic functions (sharing resources, assignments,
+grades), and institutions want more open and more personalized
+environments, which \citet{brown2015} call \emph{next generation digital
+learning environments} \cite{dahlstrom2014,brown2015}. Our analysis
+highlights six limits, summarized in \cref{tab-limits}.
+
+\begin{enumerate}
+  \item \textbf{A single path.} All enrolled learners usually see the same
+        course in the same order. Adaptation exists, but it depends on
+        hand-written rules (\cref{subsec-moodle-adaptation}).
+  \item \textbf{No explicit learner model.} The LMS stores grades,
+        completions and logs, but it does not build a representation of
+        what the learner has mastered, of their recurring mistakes and of
+        their goals.
+  \item \textbf{Context reduced to the structure of the site.} The context
+        known to the platform is limited to the course and the activity.
+        The time of day, the workload, upcoming deadlines or the device in
+        use are not exploited.
+  \item \textbf{One-off AI assistance.} The built-in AI tools answer a
+        specific request, with no coordination between functions and no
+        link to the learner's tracking (\cref{subsec-moodle-ai}).
+  \item \textbf{Little support for teachers to improve their materials.}
+        Reports show who passed or failed, but they do not link the
+        observed difficulties to the parts of the course that might
+        explain them.
+  \item \textbf{Scattered data.} Useful traces are spread across the logs,
+        the gradebook, the question banks and sometimes an external LRS.
+        Exploiting them requires integration work that the platform does
+        not do.
+\end{enumerate}
+
+\begin{table}[htbp]
+\centering
+\caption{Limits of current LMSs and needs for adaptive learning}
+\label{tab-limits}
+\small
+\begin{tabularx}{\textwidth}{@{}L{4.1cm}YY@{}}
+\toprule
+\textbf{Observed limit} & \textbf{Consequence} & \textbf{Need for our framework} \\
+\midrule
+Single path, hand-written rules & Struggling and advanced learners follow
+  the same route & Automatic learning path planning \\
+No learner model & Gaps are only detected after assessment & Continuous
+  diagnosis of knowledge and mistakes \\
+Context reduced to the site structure & Recommendations ignore the
+  learner's actual situation & Explicit context model \\
+One-off, isolated AI & No follow-up between requests, no coordination &
+  Specialized agents coordinated by an orchestrator \\
+Little help to improve materials & The same difficulties recur from one
+  cohort to the next & Analysis of materials and proposals approved by the
+  teacher \\
+Scattered data & Costly exploitation of traces & A single integration
+  layer (web services, events, xAPI) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{summarybox}
+LMSs, and Moodle in particular, provide a reliable infrastructure for
+organizing teaching and an open integration layer (web services, events,
+LTI 1.3, AI subsystem). However, they model neither the learner nor the
+learner's context, and their AI tools remain one-off. An external
+framework can fill these gaps by building on the platform's integration
+points, without modifying its core.
+\end{summarybox}
+
+% =====================================================================
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+% =====================================================================
+
+This chapter presented online learning, the role and architecture of
+LMSs, the standards that let them exchange data with other tools and the
+main platforms on the market. The study of Moodle showed an open,
+extensible and widely adopted platform, in particular in Algerian
+universities, which has included a first AI subsystem since version 4.5.
+It also showed that adaptation in Moodle still relies on hand-written
+rules and that its built-in AI follows neither the learner nor the
+learner's context.
+
+Going further requires techniques able to model the learner, take their
+context into account and coordinate several intelligent functions. The
+next chapter studies these techniques: adaptive and context-aware
+learning, large language models in education and multi-agent systems,
+followed by the work that combines them.

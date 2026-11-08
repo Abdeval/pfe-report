@@ -1,0 +1,49 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}[
+  uc/.style={usecase, minimum width=33mm, minimum height=9mm},
+  assoc/.style={draw=pInk, thick},
+  dep/.style={draw=pMuted, dashed, -{Stealth[length=1.8mm]}},
+  dlbl/.style={font=\scriptsize, fill=white, inner sep=1pt, text=pMuted}]
+  % ---------------------------------------------------------------- student use cases (left column)
+  \node[uc] (s1) at (0, 4.8) {Read course activity};
+  \node[uc] (s2) at (0, 3.4) {Ask the tutor};
+  \node[uc] (s3) at (0, 2.0) {Take adaptive quiz};
+  \node[uc] (s4) at (0, 0.6) {View progress};
+  \node[uc] (s5) at (0,-0.8) {Act on suggestions};
+  % included use cases (middle)
+  \node[uc, fill=white] (i1) at (4.1, 3.4) {Retrieve course\\passages};
+  \node[uc, fill=white] (i2) at (4.1, 2.0) {Update mastery};
+  % ---------------------------------------------------------------- teacher use cases (right column)
+  \node[uc] (t1) at (8.2, 4.8) {Index course};
+  \node[uc] (t2) at (8.2, 3.4) {Review question bank};
+  \node[uc] (t3) at (8.2, 2.0) {Set objectives and\\review mode};
+  \node[uc] (t4) at (8.2, 0.6) {Monitor class};
+  \node[uc] (t5) at (8.2,-0.8) {Analyse material};
+  % scheduler
+  \node[uc] (c1) at (4.1,-2.0) {Sync context};
+  % system boundary
+  \begin{scope}[on background layer]
+    \node[draw=pInk, thick, fill=pDataL, rounded corners=2pt, fit=(s1)(t1)(s5)(t5)(c1), inner xsep=8pt,
+      inner ysep=14pt, label={[anchor=north, font=\footnotesize\bfseries, yshift=-2pt]north:Adaptive learning platform}] (sys) {};
+  \end{scope}
+  % ---------------------------------------------------------------- actors
+  \actor{stu}{-3.4, 2.2}{Student}
+  \actor{tea}{11.6, 2.2}{Teacher}
+  \actor{mdl}{11.6,-2.2}{\guillemotleft system\guillemotright\\Moodle}
+  \actor{llm}{11.6, 5.6}{\guillemotleft system\guillemotright\\LLM provider}
+  \actor{sch}{-3.4,-2.0}{\guillemotleft system\guillemotright\\Scheduler}
+  % associations
+  \foreach \u in {s1,s2,s3,s4,s5} \draw[assoc] (stu-c) ++(0.3,0) -- (\u.west);
+  \foreach \u in {t1,t2,t3,t4,t5} \draw[assoc] (tea-c) ++(-0.3,0) -- (\u.east);
+  \draw[assoc] (sch-c) ++(0.3,0) -- (c1.west);
+  \draw[assoc] (llm-c) ++(-0.3,0) -- (t1.north east);
+  \draw[assoc] (mdl-c) ++(-0.3,0) -- (c1.east);
+  % includes
+  \draw[dep] (s2) -- node[dlbl, above] {\guillemotleft include\guillemotright} (i1);
+  \draw[dep] (s3) -- node[dlbl, above] {\guillemotleft include\guillemotright} (i2);
+  \node[note, anchor=north west, text=pInk, text width=80mm] at ([yshift=-3mm]sys.south west)
+    {Secondary actors: Moodle provides course data and files (read-only, through the API) to reading, indexing and the context sync; the LLM provider computes embeddings and writes answers, quiz items and material drafts; the Scheduler starts the periodic context sync. One line per secondary actor is drawn for readability.};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,55 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}[
+  det/.style={agent, font=\scriptsize, minimum width=54mm, text width=51mm, align=left, minimum height=10mm},
+  ev/.style={data, font=\scriptsize, minimum width=40mm, minimum height=7mm},
+  arr/.style={->, thick, draw=pInk}]
+  % ---------------------------------------------------------------- evidence
+  \node[ev] (e1) at (0, 2.6) {answers + misconception labels};
+  \node[ev, below=2mm of e1] (e2) {unanswered tutor turns};
+  \node[ev, below=2mm of e2] (e3) {reading time per section};
+  \node[ev, below=2mm of e3] (e4) {BKT mastery};
+  \node[ev, below=2mm of e4] (e5) {activity views};
+  \begin{scope}[on background layer]
+    \node[layer={pData}{1. Evidence (shared state)}, fit=(e1)(e5), inner ysep=13pt] (E) {};
+  \end{scope}
+  % ---------------------------------------------------------------- detectors
+  \node[det] (d1) at (5.3, 3.2) {\textbf{misconception}: $\geq$ 30\,\% of learners, and above chance
+    (one-sided binomial test, $\alpha$ = 0.01, Bonferroni)};
+  \node[det, below=1.5mm of d1] (d2) {\textbf{problem\_question}: $\geq$ 8 answers, $\leq$ 25\,\% correct;
+    a wrong option with positive discrimination $\Rightarrow$ wrong key};
+  \node[det, below=1.5mm of d2] (d3) {\textbf{unanswered}: grouped at cosine $\geq$ 0.70 to the centroid,
+    asked by $\geq$ 2 learners};
+  \node[det, below=1.5mm of d3] (d4) {\textbf{unclear\_section}: $\geq$ 40\,\% read $\geq$ 5 min and stay below
+    0.5 mastery};
+  \node[det, below=1.5mm of d4] (d5) {\textbf{skipped\_activity}: opened by $<$ 30\,\% of the learners
+    assessed on its section};
+  \begin{scope}[on background layer]
+    \node[layer={pAgent}{2. Detectors (code, statistics)}, fit=(d1)(d5), inner ysep=13pt] (D) {};
+  \end{scope}
+  % ---------------------------------------------------------------- issues + writer
+  \node[data, font=\scriptsize, minimum width=30mm, align=center] (iss) at (10.4, 2.3)
+    {\textbf{3. Issues}\\kind, severity,\\evidence, stable key};
+  \node[ai, font=\scriptsize, minimum width=30mm, align=center] (wr) at (10.4, 0.0)
+    {\textbf{4. LLM writer}\\diagnosis, change,\\draft (quote checked)};
+  % ---------------------------------------------------------------- review states
+  \node[state] (p) at (5.0,-4.4) {pending};
+  \node[state] (ac) at (7.8,-3.8) {accepted};
+  \node[state] (rj) at (7.8,-5.0) {rejected};
+  \node[state] (ap) at (10.6,-3.8) {applied};
+  \begin{scope}[on background layer]
+    \node[layer={pApi}{5. Teacher review}, fit=(p)(ac)(rj)(ap), inner ysep=13pt] (R) {};
+  \end{scope}
+  % flows
+  \draw[arr] (E.east) -- (D.west |- E.east);
+  \draw[arr] (D.east |- iss) -- (iss.west);
+  \draw[arr] (iss) -- (wr);
+  \draw[arr] (wr.south) -- (wr.south |- 0,-2.75) -| (p.north);
+  \draw[->, thick, pApi] (p) -- (ac);
+  \draw[->, thick, pApi] (p) -- (rj);
+  \draw[->, thick, pApi] (ac) -- node[lblc, above=0.5mm] {} (ap);
+  \node[note, anchor=north east, text width=40mm] at ([xshift=-3mm]R.north west)
+    {\emph{applied}: the teacher changed the material in Moodle; the app never writes to it. A new run never re-creates a rejected suggestion (same key).};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,50 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}[
+  tr/.style={->, thick, draw=pInk},
+  tl/.style={font=\scriptsize, fill=white, inner sep=1pt, align=center}]
+  % ================================================================ Quiz
+  \node[font=\footnotesize\bfseries] at (0, 0.9) {Quiz};
+  \node[initial] (qi) at (0, 0.2) {};
+  \node[state] (qg) at (0,-1.0) {generating};
+  \node[state] (qr) at (-1.1,-2.7) {ready};
+  \node[state] (qf) at (1.3,-2.7) {failed (code)};
+  \node[state] (qc) at (-1.1,-4.4) {completed};
+  \node[final] (qe) at (-1.1,-5.6) {};
+  \draw[tr] (qi) -- (qg);
+  \draw[tr] (qg) -- node[tl, left] {items\\valid} (qr);
+  \draw[tr] (qg) -- node[tl, right] {timeout,\\LLM error,\\awaiting review} (qf);
+  \draw[tr] (qr) -- node[tl] {all items\\answered} (qc);
+  \draw[tr] (qc) -- (qe);
+  % ================================================================ Question
+  \begin{scope}[xshift=5.4cm]
+    \node[font=\footnotesize\bfseries] at (0, 0.9) {Bank question};
+    \node[initial] (bi) at (0, 0.2) {};
+    \node[state] (bp) at (0,-1.0) {pending};
+    \node[state] (br) at (-1.3,-3.0) {rejected};
+    \node[state] (ba) at (1.3,-3.0) {approved};
+    \draw[tr] (bi) -- node[tl, left] {generated\\(\texttt{review})} (bp);
+    \draw[tr] (bp) -- node[tl, left] {teacher\\rejects} (br);
+    \draw[tr] ([xshift=-1mm]bp.south east) -- node[tl, left, pos=0.55] {teacher\\approves} ([xshift=-3mm]ba.north);
+    \draw[tr] ([xshift=3mm]ba.north) -- node[tl, right, pos=0.45] {edited} ([xshift=3mm]bp.south east);
+    \draw[tr] (bi.east) -- ++(1.9,0) node[tl, above, pos=0.55] {\texttt{auto\_publish}} |- ([yshift=1mm]ba.east) ;
+  \end{scope}
+  % ================================================================ Material suggestion
+  \begin{scope}[xshift=11.2cm]
+    \node[font=\footnotesize\bfseries] at (0, 0.9) {Material suggestion};
+    \node[initial] (mi) at (0, 0.2) {};
+    \node[state] (mp) at (0,-1.0) {pending};
+    \node[state] (ma) at (-1.2,-2.8) {accepted};
+    \node[state] (mr) at (1.4,-2.8) {rejected};
+    \node[state] (mx) at (-1.2,-4.6) {applied};
+    \draw[tr] (mi) -- node[tl, right] {issue drafted} (mp);
+    \draw[tr] ([xshift=-2mm]mp.south) -- node[tl, left] {accept\\(or edit)} ([xshift=-2mm]ma.north east);
+    \draw[tr] ([xshift=2mm]ma.north east) -- node[tl, right, pos=0.4] {undo} ([xshift=6mm]mp.south);
+    \draw[tr] ([xshift=10mm]mp.south) -- node[tl, right] {reject} (mr.north);
+    \draw[tr] (mr.west) -- node[tl, below] {undo} ([yshift=-2mm]ma.east);
+    \draw[tr] ([xshift=-2mm]ma.south) -- node[tl, left] {changed\\in Moodle} ([xshift=-2mm]mx.north);
+    \draw[tr] ([xshift=3mm]mx.north) -- node[tl, right] {undo} ([xshift=3mm]ma.south);
+  \end{scope}
+\end{tikzpicture}
+\end{document}

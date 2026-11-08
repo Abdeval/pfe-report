@@ -1,0 +1,57 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+\begin{document}
+\begin{tikzpicture}
+\node[web, lifehead, minimum width=21mm, align=center] (h-st) at (0.00,0) {Student};
+\node[web, lifehead, minimum width=21mm, align=center] (h-web) at (2.35,0) {Web app};
+\node[api, lifehead, minimum width=21mm, align=center] (h-api) at (4.70,0) {API};
+\node[agent, lifehead, minimum width=21mm, align=center] (h-as) at (7.05,0) {Assessment};
+\node[data, lifehead, minimum width=21mm, align=center] (h-bank) at (9.40,0) {Question\\[-1pt]bank};
+\node[ai, lifehead, minimum width=21mm, align=center] (h-llm) at (11.75,0) {LLM};
+\node[agent, lifehead, minimum width=21mm, align=center] (h-dg) at (14.10,0) {Diagnosis\\[-1pt]StateStore};
+\draw[life] (h-st.south) -- (0.00,-19.75);
+\draw[life] (h-web.south) -- (2.35,-19.75);
+\draw[life] (h-api.south) -- (4.70,-19.75);
+\draw[life] (h-as.south) -- (7.05,-19.75);
+\draw[life] (h-bank.south) -- (9.40,-19.75);
+\draw[life] (h-llm.south) -- (11.75,-19.75);
+\draw[life] (h-dg.south) -- (14.10,-19.75);
+\node[activation, minimum height=8.54cm, anchor=north] at (7.05,-2.66) {};
+\draw[msg] (0.00,-0.95) -- node[mlbl, above=0.5pt] {starts a quiz} (2.35,-0.95);
+\draw[msg] (2.35,-1.57) -- node[mlbl, above=0.5pt] {POST \texttt{/quizzes}} (4.70,-1.57);
+\draw[msg] (4.70,-2.19) -- node[mlbl, above=0.5pt] {create quiz (section, language)} (7.05,-2.19);
+\draw[reply] (6.94,-2.81) -- node[mlbl, above=0.5pt] {quiz \texttt{generating} (polled)} (2.35,-2.81);
+\draw[msg] (7.16,-3.43) -- node[mlbl, above=0.5pt] {approved, never answered} (9.40,-3.43);
+\draw[reply] (9.40,-4.05) -- node[mlbl, above=0.5pt] {$k$ questions} (7.16,-4.05);
+\node[font=\scriptsize\itshape, anchor=north west, fill=white, inner sep=1pt] at (4.20,-4.82) {[shortfall, \texttt{auto\_publish}]};
+\draw[msg] (7.16,-5.57) -- node[mlbl, above=0.5pt] {write missing items} (11.75,-5.57);
+\draw[reply] (11.75,-6.19) -- node[mlbl, above=0.5pt] {items (JSON schema)} (7.16,-6.19);
+\draw[msg] (7.16,-6.69) -- ++(0.45,0) -- ++(0,-0.32) -- (7.16,-7.01);
+\node[mlbl, anchor=west, fill=none, align=left] at (7.66,-6.85) {validate in code};
+\draw[msg] (7.16,-7.55) -- node[mlbl, above=0.5pt] {insert \texttt{approved}} (9.40,-7.55);
+\draw[frag, dashed] (3.65,-8.05) -- (12.80,-8.05);
+\node[font=\scriptsize\itshape, anchor=north west, fill=white, inner sep=1pt] at (3.75,-8.10) {[shortfall, \texttt{review}]};
+\draw[msg] (7.16,-8.83) -- node[mlbl, above=0.5pt] {write missing items} (11.75,-8.83);
+\draw[msg] (7.16,-9.45) -- node[mlbl, above=0.5pt] {insert \texttt{pending}} (9.40,-9.45);
+\draw[reply] (6.94,-10.07) -- node[mlbl, above=0.5pt] {\texttt{ready} if $\geq n-2$ approved, else \texttt{awaiting\_review}} (2.35,-10.07);
+\draw[frag] (3.65,-4.79) rectangle (12.80,-10.54);
+\node[fraglbl] at (3.65,-4.79) {alt};
+\draw[reply] (6.94,-10.89) -- node[mlbl, above=0.5pt] {quiz \texttt{ready} (items without keys)} (2.35,-10.89);
+\node[font=\scriptsize\itshape, anchor=north west, fill=white, inner sep=1pt] at (-0.30,-11.66) {[each answer]};
+\draw[msg] (0.00,-12.41) -- node[mlbl, above=0.5pt] {chooses an option} (2.35,-12.41);
+\draw[msg] (2.35,-13.03) -- node[mlbl, above=0.5pt] {POST \texttt{/answers}} (4.70,-13.03);
+\draw[msg] (4.70,-13.65) -- node[mlbl, above=0.5pt] {grade (code, no LLM)} (7.05,-13.65);
+\draw[msg] (7.05,-14.27) -- node[mlbl, above=0.5pt] {BKT update + response} (14.10,-14.27);
+\draw[msg] (14.10,-14.77) -- ++(0.45,0) -- ++(0,-0.32) -- (14.10,-15.09);
+\node[mlbl, anchor=west, fill=none, align=left] at (14.60,-14.93) {one transaction};
+\draw[reply] (14.10,-15.63) -- node[mlbl, above=0.5pt] {$P(L)$ before / after} (7.05,-15.63);
+\draw[reply] (7.05,-16.25) -- node[mlbl, above=0.5pt] {correct?, explanation} (2.35,-16.25);
+\draw[frag] (-1.05,-11.63) rectangle (15.15,-16.72);
+\node[fraglbl] at (-1.05,-11.63) {loop};
+\draw[msg] (2.35,-17.07) -- node[mlbl, above=0.5pt] {GET \texttt{/recommendations}} (4.70,-17.07);
+\draw[msg] (4.70,-17.69) -- node[mlbl, above=0.5pt] {rank sections (Recommendation)} (14.10,-17.69);
+\draw[reply] (14.10,-18.31) -- node[mlbl, above=0.5pt] {ranked sections + reasons} (2.35,-18.31);
+\draw[reply] (2.35,-18.93) -- node[mlbl, above=0.5pt] {mastery before / after, next} (0.00,-18.93);
+\node[note, text=pInk, anchor=north west] at (-1.00,-20.00) {\tikz[baseline=-0.5ex]\draw[msg] (0,0) -- (0.5,0); call \quad \tikz[baseline=-0.5ex]\draw[reply] (0,0) -- (0.5,0); reply \quad };
+\end{tikzpicture}
+\end{document}

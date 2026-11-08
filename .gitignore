@@ -1,0 +1,74 @@
+# ---- LaTeX build outputs ----
+*.pdf
+*.dvi
+*.ps
+*.xdv
+
+# Auxiliary files
+*.aux
+*.lof
+*.lot
+*.toc
+*.out
+*.log
+*.fls
+*.fdb_latexmk
+*.synctex
+*.synctex.gz
+*.synctex(busy)
+*.run.xml
+*-blx.bib
+*.bcf
+*.nav
+*.snm
+*.vrb
+*.loa
+*.lol
+*.thm
+
+# Bibliography (BibTeX / Biber)
+*.bbl
+*.bbl-SAVE-ERROR
+*.blg
+
+# Glossaries / acronyms / index
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.glsdefs
+*.ist
+*.idx
+*.ilg
+*.ind
+*.nlo
+*.nls
+
+# cleveref / hyperref / minted / tikz externalization
+*.brf
+*.cb
+*.cb2
+_minted*/
+*.pyg
+*.auxlock
+*.dpth
+*.md5
+*.figlist
+*.makefile
+*-figure*.pdf
+
+# Build directories
+build/
+out/
+_build/
+
+# Editor / OS files
+*.bak
+*.sav
+*~
+*.swp
+.DS_Store
+Thumbs.db
+.vscode/
