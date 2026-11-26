@@ -40,9 +40,9 @@
   \node[store, minimum width=30mm] (rd) at (wk |- pg) {Redis 7\\[-1pt]\scriptsize BullMQ queues};
 
   % ---------------------------------------------------------------- external
-  \node[lms, minimum width=30mm, minimum height=14mm] (moodle) at (20.6,-5.0)
+  \node[lms, minimum width=30mm, minimum height=14mm] (moodle) at (22.2,-5.0)
         {\textbf{Moodle 4.5 LTS}\\[-1pt]\scriptsize LMS backend\\[-1pt]\scriptsize core never modified};
-  \node[ai, minimum width=30mm] (llm) at (20.6,-8.0)
+  \node[ai, minimum width=30mm] (llm) at (22.2,-8.0)
         {\textbf{Chat LLM}\\[-1pt]\scriptsize Groq (hosted) or\\[-1pt]\scriptsize Ollama (local)};
   \node[ai, minimum width=30mm, below=4mm of llm] (emb)
         {\textbf{Embeddings}\\[-1pt]\scriptsize bge-m3 (Ollama)};
@@ -70,8 +70,8 @@
   \draw[call] (La.north -| g4) coordinate (x4) -- node[lblc, right] {Moodle data \& files (internal endpoints)}
         (x4 |- Lg.south);
   \draw[call] (g5) -- node[lbl] {REST web services\\token, read-only} (moodle);
-  \draw[call] (a4.east -| La.east) -- node[lbl, above] {prompts} (llm);
-  \draw[call] (wk.east -| La.east) |- node[lbl, pos=0.75, below] {texts} (emb);
+  \draw[call] (La.east |- llm) -- node[lbl, above=1pt, pos=0.72] {prompts} (llm.west);
+  \draw[call] (La.east |- emb) -- node[lbl, above=1pt, pos=0.72] {texts} (emb.west);
   % Jobs: around the agents layer, on its right.
   \draw[async] ([yshift=-3mm]Lg.east) -- ([yshift=-3mm]Lg.east -| La.east) -- ++(0.6,0)
         |- node[lblc, right, pos=0.45] {jobs} (rd.east);

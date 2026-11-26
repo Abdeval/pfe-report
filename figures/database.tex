@@ -4,7 +4,7 @@
 \begin{tikzpicture}[
   tb/.style={table=#1, text width=31mm},
   fk/.style={draw=pMuted, thick, -{Stealth[length=1.8mm]}},
-  grp/.style 2 args={draw=#1, fill=#1!4, rounded corners=5pt, thick, dashed, inner xsep=5pt, inner ysep=10pt,
+  grp/.style 2 args={draw=#1, fill=#1!4, rounded corners=5pt, thick, dashed, inner xsep=5pt, inner ysep=12pt,
     label={[anchor=north west, font=\scriptsize\bfseries, text=#1, xshift=2pt, yshift=-1pt]north west:#2}}]
   \newcommand{\tbh}[1]{\textcolor{white}{\scriptsize\bfseries #1}}
   % ================================================================ identity
@@ -28,7 +28,7 @@
   \node[tb=pWeb, below=6mm of msg] (snap) {\tbh{context\_snapshot}\nodepart{second}\fk{session\_id}\\state jsonb (per turn)\\version};
   \node[tb=pWeb, below=6mm of snap] (ev) {\tbh{agent\_event}\nodepart{second}\pk{id}, trace\_id\\agent, kind\\payload, latency\_ms};
   % ================================================================ assessment
-  \node[tb=pOk] (quiz) at (4.2,-7.75) {\tbh{quiz}\nodepart{second}\pk{id}\\\fk{user\_id}, \fk{course\_id}\\topic\_key, lang, status};
+  \node[tb=pOk] (quiz) at (4.2,-8.6) {\tbh{quiz}\nodepart{second}\pk{id}\\\fk{user\_id}, \fk{course\_id}\\topic\_key, lang, status};
   \node[tb=pOk, right=6mm of quiz] (qi) {\tbh{quiz\_item}\nodepart{second}\pk{id}, \fk{quiz\_id}\\stem, options jsonb\\answer\_index\\\fk{question\_id}};
   \node[tb=pOk, right=6mm of qi] (qr) {\tbh{quiz\_response}\nodepart{second}\fk{quiz\_item\_id}\\chosen\_index, correct\\p\_known\_before\\p\_known\_after};
   % ================================================================ teacher

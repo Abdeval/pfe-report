@@ -1,47 +1,1444 @@
 % =====================================================================
 %  Chapter 2: AI, LLMs and multi-agent systems in education
-%  (skeleton, to be written)
+%  (state of the art)
+%  Sources: Notion SOTA plan (sections 2-7), the surveys of Chu et al.
+%  (2025), Wang et al. (2024) and Guo et al. (2024), the primary works
+%  (ELA Tutor x2, IJACSA-Arch, GenMentor, CA-MA-DRL) and the papers,
+%  products and frameworks verified on 2026-11-09.
 % =====================================================================
 \chapter{Artificial Intelligence, LLMs and Multi-Agent Systems in Education}
 \label{chap-sota}
 
 \section*{Introduction}
 \addcontentsline{toc}{section}{Introduction}
-\todonote{Recall the conclusion of Chapter 1 and announce the plan.}
 
+\Cref{chap-lms} ended on a clear observation: learning management systems
+organize teaching well, but they model neither the learner nor the
+learner's context, and the AI tools they now include answer isolated
+requests. This chapter studies the techniques that can fill these gaps and
+the systems that already combine them. It follows a funnel, from the broad
+field of adaptive learning down to the few recent systems that are closest
+to our objective, and it ends with the gaps that motivate our
+contribution.
+
+\Cref{sec-adaptive} recalls the pedagogical foundations of adaptive and
+personalized learning, the learner model and knowledge tracing,
+intelligent tutoring systems and learning path planning. \Cref{sec-context}
+defines context and context-aware learning. \Cref{sec-llm} presents large
+language models, their educational uses, retrieval-augmented generation
+and their limits. \Cref{sec-mas} moves from classical multi-agent systems
+to systems built on language models, their orchestration patterns and the
+frameworks that implement them. \Cref{sec-related-work} analyses the
+related work: products, research prototypes and tools for teachers.
+\Cref{sec-synthesis} draws the synthesis: the gaps of the literature, the
+open challenges, the way such systems are evaluated and the position of
+our work.
+
+The review started from three recent surveys, on LLMs for education
+\cite{wang2024llm4edu}, on LLM agents for education \cite{chu2025agents}
+and on LLM-based multi-agent systems \cite{guo2024mas}, and was extended
+by following their references and citing works, with a focus on the period
+2023--2026.
+
+% =====================================================================
 \section{Adaptive and personalized learning}
 \label{sec-adaptive}
+% =====================================================================
+
+\subsection{Pedagogical foundations}
+\label{subsec-foundations}
+
+Adaptive learning rests on a few well-established findings about how
+people learn.
+
+\subsubsection{The two-sigma problem}
+\citet{bloom1984} reported that students
+tutored one to one, with mastery learning, performed about two standard
+deviations above students taught in a conventional class: the average
+tutored student did better than 98\,\% of the class. One-to-one tutoring is
+therefore the reference to approximate, but it cannot be offered to every
+student by human tutors. Educational technology has tried to approximate
+it for sixty years.
+
+\subsubsection{Mastery learning}
+In the same tradition, a learner moves on
+to a new unit only once the previous one is mastered, and receives
+corrective activities otherwise \cite{bloom1984}. This principle is the
+origin of the mastery thresholds used by tutoring systems
+(\cref{sec-kt}).
+
+\subsubsection{Zone of proximal development and scaffolding}
+
+\citet{vygotsky1978} defines the zone of proximal development as the gap
+between what a learner can do alone and what they can do with help.
+Learning is most productive inside this zone: tasks should be neither too
+easy nor too hard. \citet{wood1976} call \emph{scaffolding} the temporary
+support a tutor gives inside this zone, then withdraws as competence grows.
+Hints that do not reveal the solution are a typical form of scaffolding.
+
+\subsubsection{Feedback and formative assessment}
+Feedback is one of the
+strongest influences on learning, provided it tells the learner where they
+are, where they are going and what to do next \cite{hattie2007}. Frequent
+low-stakes assessment, followed by such feedback, is therefore a core
+mechanism of adaptive systems.
+
+\subsubsection{Cognitive load and spacing}
+Working memory is limited, and
+instruction that overloads it hinders learning \cite{sweller1988}.
+Practice spread over time is retained better than massed practice
+\cite{cepeda2006}. Both results constrain how much content a system should
+present at once and when it should bring a topic back.
+
+\subsubsection{Learning objectives}
+The revised taxonomy of
+\citet{anderson2001taxonomy} orders cognitive objectives from remembering
+to creating. It is used to state what a course expects and to classify
+questions by level.
+
+\subsubsection{A caution on learning styles}
+Many adaptive systems still
+adapt content to \enquote{learning styles} such as VARK or Felder--Silverman.
+A review by \citet{pashler2008} found no adequate evidence that matching
+instruction to a learner's preferred style improves learning. Our
+framework therefore adapts to what the learner knows and to their
+situation, not to a declared style.
+
 \subsection{Definitions: adaptation, personalization, individualization}
+\label{subsec-definitions}
+
+These terms are often used interchangeably. \Cref{tab-adapt-terms} gives
+the distinctions used in this thesis, following the U.S.\ National
+Education Technology Plan \cite{netp2010} and the literature on adaptive
+systems \cite{brusilovsky2001,shute2012}.
+
+\begin{table}[htbp]
+\centering
+\caption{Terms used for tailoring learning}
+\label{tab-adapt-terms}
+\small
+\begin{tabularx}{\textwidth}{@{}L{3.2cm}YL{3.4cm}@{}}
+\toprule
+\textbf{Term} & \textbf{Meaning} & \textbf{Who decides} \\
+\midrule
+Individualization & The pace varies with each learner's needs; goals and content stay the same \cite{netp2010} & Teacher or system \\
+Differentiation & The method varies with the preferences or needs of groups of learners \cite{netp2010} & Teacher \\
+Personalization & Pace, method and sometimes goals and content vary with each learner's needs and interests \cite{netp2010} & Teacher, learner or system \\
+Adaptability & The user changes the system's behaviour explicitly (settings, choices) \cite{brusilovsky2001} & User \\
+Adaptivity & The system changes its own behaviour from a model of the user built from data \cite{brusilovsky2001,shute2012} & System \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{definitionbox}{Adaptive learning system}
+An \emph{adaptive learning system} collects data about each learner,
+maintains a model of the learner from these data and uses this model to
+change what it presents, in what order and with what support, without the
+teacher having to plan each case \cite{shute2012,xie2019}.
+\end{definitionbox}
+
+Two questions characterize any adaptive system: \emph{what} is adapted and
+\emph{to what}. \Cref{tab-adapt-what} summarizes the answers found in the
+literature \cite{brusilovsky2001,xie2019}. Personalization research has long
+favoured content and sequence adapted to knowledge; dialogue and feedback
+adapted to the context have become practical only with language models
+(\cref{sec-llm}).
+
+\begin{table}[htbp]
+\centering
+\caption{What can be adapted, and to what}
+\label{tab-adapt-what}
+\small
+\begin{tabularx}{\textwidth}{@{}L{3.6cm}Y@{}}
+\toprule
+\textbf{What is adapted} & \textbf{Examples} \\
+\midrule
+Content & level of detail of an explanation, choice of examples, language \\
+Sequence or learning path & next unit, remediation before progressing, skipping known units \\
+Difficulty & choice of exercises inside the zone of proximal development \\
+Pace & time allowed, review schedule \\
+Feedback and hints & from a hint to a worked solution, tone of the message \\
+Presentation & format, media, modality \\
+\midrule
+\textbf{Adapted to} & \textbf{Examples} \\
+\midrule
+Knowledge & mastery of each concept, misconceptions \\
+Goals & course objectives, personal goals, deadlines \\
+Behaviour & activity, inactivity, help seeking \\
+Context & task, time, device, social setting (\cref{sec-context}) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \subsection{Learner model and knowledge tracing}
 \label{sec-kt}
-\subsection{Intelligent tutoring systems}
 
+\begin{definitionbox}{Learner model}
+The \emph{learner model} (or student model) is the representation that a
+system keeps of a learner: knowledge of each concept, misconceptions,
+goals, preferences, history and sometimes affective state. It is updated
+from the learner's traces and read by the components that take
+pedagogical decisions \cite{brusilovsky2007,chrysafiadi2013}.
+\end{definitionbox}
+
+\subsubsection{Classical representations}
+The \emph{overlay} model represents
+the learner's knowledge as a subset, or a weighted subset, of the domain
+model \cite{carr1977}. The \emph{stereotype} model assigns the learner to a
+predefined class, such as beginner or expert \cite{rich1979}. The
+\emph{perturbation} or \emph{bug} model adds the incorrect rules that
+explain systematic errors \cite{brown1978}; it is the origin of the notion
+of misconception used to label wrong answers. When the model is shown to
+the learner, it is called an \emph{open learner model}, which supports
+reflection and trust \cite{bull2016}.
+
+\begin{definitionbox}{Knowledge tracing}
+\emph{Knowledge tracing} (KT) estimates, after each answer of a learner,
+the probability that the learner masters each knowledge component, and
+predicts the correctness of the next answers \cite{corbett1994kt,abdelrahman2023}.
+\end{definitionbox}
+
+\subsubsection{Bayesian knowledge tracing}
+BKT \cite{corbett1994kt} models
+each knowledge component as a hidden Markov model with two states,
+\emph{unknown} and \emph{known} (\cref{fig-bkt}). Four parameters describe
+it: the prior probability of knowing the component, the probability of
+learning it at each opportunity, the probability of a \emph{slip} (a wrong
+answer although the component is known) and the probability of a
+\emph{guess} (a right answer although it is unknown). After each answer,
+Bayes' rule updates the probability of the known state. BKT is the model
+behind the Cognitive Tutors \cite{anderson1995,ritter2007}. Extensions
+estimate the parameters per learner \cite{pardos2010} or the slip and guess
+from the context of the answer \cite{baker2008}.
+
+\begin{figure}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tikzpicture}[node distance=1.2cm and 5.2cm,
+  st/.style={bloc,circle,minimum size=1.9cm,text width=1.6cm},
+  ob/.style={bloc,fill=white,text width=1.9cm,minimum height=0.8cm}]
+  \node[st] (u) {Unknown};
+  \node[st,blocstrong,right=of u] (k) {Known};
+  \draw[arrow] (u) to[bend left=20] node[above,font=\footnotesize]{learn $T$} (k);
+  \draw[arrow] (u) to[loop above,looseness=5] node[above,font=\footnotesize]{$1-T$} (u);
+  \draw[arrow] (k) to[loop above,looseness=5] node[above,font=\footnotesize]{1 (no forgetting)} (k);
+  \node[ob,below=1.6cm of u,xshift=-1.1cm] (uc) {correct};
+  \node[ob,below=1.6cm of u,xshift=1.4cm] (ui) {incorrect};
+  \node[ob,below=1.6cm of k,xshift=-1.4cm] (kc) {correct};
+  \node[ob,below=1.6cm of k,xshift=1.1cm] (ki) {incorrect};
+  \draw[arrow,dashed] (u) -- node[left,font=\footnotesize]{guess $G$} (uc);
+  \draw[arrow,dashed] (u) -- node[right,font=\footnotesize]{$1-G$} (ui);
+  \draw[arrow,dashed] (k) -- node[left,font=\footnotesize]{$1-S$} (kc);
+  \draw[arrow,dashed] (k) -- node[right,font=\footnotesize]{slip $S$} (ki);
+  \node[left=0.4cm of u,font=\footnotesize,text=thgray,align=right] {prior\\$P(L_0)$};
+\end{tikzpicture}}
+\caption[Bayesian knowledge tracing]{Bayesian knowledge tracing as a hidden
+Markov model: two hidden states, four parameters, observed answers
+\cite{corbett1994kt}.}
+\label{fig-bkt}
+\end{figure}
+
+\subsubsection{Logistic and psychometric models}
+Item response theory (IRT)
+models the probability of a correct answer as a logistic function of the
+learner's ability and the item's difficulty \cite{lord1980}. Performance
+factors analysis extends this idea to learning by counting the successes
+and failures of the learner on each component \cite{pavlik2009}. Knowledge
+space theory, used by ALEKS, represents the feasible states of knowledge of
+a domain and the prerequisite structure between items \cite{doignon1999}.
+
+\subsubsection{Deep knowledge tracing}
+\citet{piech2015} replaced the hidden
+Markov model by a recurrent neural network fed with the sequence of
+answers. Memory networks \cite{zhang2017dkvmn} and attention-based models
+\cite{pandey2019sakt,ghosh2020akt} followed. These models predict answers
+better on large datasets, but their parameters have no pedagogical meaning,
+and the gap shrinks when classical models are extended
+\cite{khajah2016}. \citet{gervet2020} show that logistic and Bayesian
+models remain competitive, or better, when data are limited, which is the
+case of a single university course. \Cref{tab-kt-families} compares these
+families \cite{pelanek2017,abdelrahman2023}.
+
+\begin{table}[htbp]
+\centering
+\caption{Families of learner models for knowledge tracing}
+\label{tab-kt-families}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}L{3.2cm}YL{2.1cm}@{}}
+\toprule
+\textbf{Family} & \textbf{Output} & \textbf{Strengths and limits} & \textbf{Data needed} \\
+\midrule
+BKT \cite{corbett1994kt} & $P(\text{known})$ per component & four interpretable parameters, updates after each answer; one component at a time, no forgetting & small \\
+IRT, PFA \cite{lord1980,pavlik2009} & probability of success from ability and difficulty & well-founded psychometrics, item calibration; needs many answers per item & medium \\
+Knowledge spaces \cite{doignon1999} & set of mastered items & explicit prerequisite structure; expert-built structure & medium \\
+Deep KT \cite{piech2015,ghosh2020akt} & next-answer prediction & best accuracy on large datasets; opaque, unstable with few learners & large \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Knowledge tracing models are evaluated offline on public datasets such as
+ASSISTments \cite{feng2009} or EdNet \cite{choi2020ednet}, by the area under
+the ROC curve (AUC) of the predicted correctness.
+
+\subsection{Intelligent tutoring systems}
+\label{subsec-its}
+
+Intelligent tutoring systems (ITSs) are the main attempt to approximate
+one-to-one tutoring. \Cref{fig-aied-timeline} places them in the history of
+educational technology, from the teaching machines of the 1950s to the
+multi-agent tutors built on language models, where our work sits.
+
+\begin{figure}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tikzpicture}[
+  gen/.style={bloc,text width=2.4cm,minimum height=3.7cm,font=\footnotesize},
+  genai/.style={gen,fill=thprimary,text=white},
+  node distance=0.3cm]
+  \node[gen] (g1) {\textbf{1950s--60s}\\[3pt]teaching machines, CAI (PLATO)\\[3pt]\textit{fixed branching}};
+  \node[gen,right=of g1] (g2) {\textbf{1970s--90s}\\[3pt]ITS (SCHOLAR, Cognitive Tutors)\\[3pt]\textit{learner and domain models}};
+  \node[gen,right=of g2] (g3) {\textbf{1990s--2000s}\\[3pt]adaptive hypermedia, LMS\\[3pt]\textit{rules, little adaptation}};
+  \node[gen,right=of g3] (g4) {\textbf{2010s}\\[3pt]MOOCs, adaptive platforms (ALEKS)\\[3pt]\textit{data-driven paths}};
+  \node[gen,right=of g4] (g5) {\textbf{2023--}\\[3pt]LLM tutors (Khanmigo, Duolingo Max)\\[3pt]\textit{dialogue, generation}};
+  \node[genai,right=of g5] (g6) {\textbf{2024--}\\[3pt]multi-agent LLM tutors\\[3pt]\textit{specialized agents}};
+  \draw[arrow] ([yshift=-0.35cm]g1.south west) -- ([yshift=-0.35cm]g6.south east)
+     node[pos=0,below right,font=\footnotesize,text=thgray]{more autonomy, richer dialogue}
+     node[pos=1,below left,font=\footnotesize,text=thgray]{our work};
+\end{tikzpicture}}
+\caption[From computer-assisted instruction to multi-agent tutors]{From
+computer-assisted instruction to multi-agent LLM tutors
+\cite{skinner1958,bitzer1961,carbonell1970,anderson1995,brusilovsky2001,doignon1999,chu2025agents}.}
+\label{fig-aied-timeline}
+\end{figure}
+
+\begin{definitionbox}{Intelligent tutoring system}
+An \emph{intelligent tutoring system} is a computer system that guides a
+learner through problems or explanations, adapting its feedback and the
+choice of activities to a model of the learner's knowledge
+\cite{woolf2009,nkambou2010}.
+\end{definitionbox}
+
+The classical architecture of an ITS has four components
+(\cref{fig-its}) \cite{woolf2009,nkambou2010}. The \emph{domain model}
+holds the knowledge to learn; the \emph{learner model} holds what the
+learner knows; the \emph{pedagogical model} decides what to do next and
+how; the \emph{interface} carries the interaction. \citet{vanlehn2006}
+describes their behaviour as two loops: an \emph{outer loop} that chooses
+the next task, and an \emph{inner loop} that gives hints and feedback on
+each step of a task.
+
+\begin{figure}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tikzpicture}[node distance=0.6cm and 1.2cm,
+  b/.style={bloc,text width=3.3cm,minimum height=1.3cm}]
+  \node[b] (dom) {\textbf{Domain model}\\\footnotesize concepts, prerequisites, exercises};
+  \node[b,right=of dom] (ped) {\textbf{Pedagogical model}\\\footnotesize outer loop: next task\\inner loop: hints, feedback};
+  \node[b,right=of ped] (lrn) {\textbf{Learner model}\\\footnotesize mastery, errors, goals};
+  \node[blocstrong,text width=3.3cm,minimum height=1.1cm,below=1.2cm of ped] (int) {Interface};
+  \node[bloc,fill=white,text width=2.4cm,below=0.8cm of int] (st) {Learner};
+  \draw[arrow] (dom) -- (ped);
+  \draw[arrow,<->] (lrn) -- (ped);
+  \draw[arrow,<->] (ped) -- (int);
+  \draw[arrow,<->] (int) -- (st);
+  \draw[arrow] (int.east) -| node[pos=0.25,below,font=\footnotesize]{answers, traces} (lrn.south);
+\end{tikzpicture}}
+\caption{Classical architecture of an intelligent tutoring system}
+\label{fig-its}
+\end{figure}
+
+ITSs are effective. In the meta-analysis of \citet{vanlehn2011}, systems
+that give feedback at each step of a problem reach an effect size of 0.76,
+close to that of human tutors (0.79). Other meta-analyses confirm moderate
+to large positive effects \cite{ma2014,kulik2016}. Their main limit is
+their cost: the domain model, the expert rules and the feedback messages
+are written by hand, at a cost of hundreds of hours of expert work per hour
+of instruction \cite{aleven2009}. As a result, ITSs exist for a few
+well-structured domains, mostly mathematics and programming, and cannot
+converse freely or explain a concept in a way that was not planned.
+
+\Cref{tab-its-mapping} anticipates how the four components appear in the
+framework presented in \cref{chap-contribution}: the classical
+architecture is kept, but each component is rebuilt from the course and
+from language models instead of being written by hand.
+
+\begin{table}[htbp]
+\centering
+\caption{The four ITS components and their counterparts in our framework}
+\label{tab-its-mapping}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}YY@{}}
+\toprule
+\textbf{Component} & \textbf{Role} & \textbf{In our framework (\cref{chap-contribution})} \\
+\midrule
+Domain model & the knowledge to learn & the Moodle course itself: its material, indexed for retrieval, and the prerequisite graph of its sections \\
+Learner model & what the learner knows and their situation & a shared, versioned learner state: mastery per section (BKT), misconceptions, interaction statistics and learner context \\
+Pedagogical model & what to do next and how & the Orchestrator, Tutor, Assessment and Recommendation agents; decisions in code, text written by an LLM \\
+Interface & interaction with the learner & a web application: course reader, tutor chat showing the agent steps, quizzes, teacher pages \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Learning path planning and recommendation}
+\label{subsec-path}
+
+A \emph{learning path} is an ordered sequence of learning units leading to
+an objective. Planning it is the outer loop of an ITS at the scale of a
+course. Four families of methods exist \cite{nabizadeh2020}:
+
+\begin{itemize}
+  \item \textbf{Prerequisite graphs}: concepts or units are ordered by
+        their dependencies, written by experts or mined from data; a unit
+        is proposed once its prerequisites are mastered
+        \cite{doignon1999}.
+  \item \textbf{Recommender systems}: content-based, collaborative or
+        hybrid filtering propose resources similar to those that helped
+        similar learners \cite{manouselis2011}.
+  \item \textbf{Reinforcement learning}: the sequence of activities is
+        learned as a policy that maximizes a reward such as learning gain.
+        A review of three decades of such work found mixed results: the
+        approach succeeds mostly when it relies on a good model of the
+        learner, and it needs much data \cite{doroudi2019}.
+  \item \textbf{Planners based on language models}: an LLM, or several
+        agents, propose and explain a path from the learner's profile and
+        goals \cite{wang2025genmentor,zeng2025graphmasal,xu2026malpp}
+        (\cref{sec-related-work}).
+\end{itemize}
+
+\begin{summarybox}[Takeaway]
+One-to-one tutoring is the most effective form of teaching but does not
+scale. Classical adaptive systems and ITSs approximate it well, with
+interpretable learner models such as BKT, but they rely on hand-built
+domain models and rigid content: they cannot converse or generate a new
+explanation, and they are expensive to extend to a new course.
+\end{summarybox}
+
+% =====================================================================
 \section{Context-aware learning}
 \label{sec-context}
-\subsection{The notion of context and its typologies}
-\subsection{Learner context and task context}
+% =====================================================================
 
+\subsection{The notion of context and its typologies}
+\label{subsec-context-def}
+
+The notion of context comes from ubiquitous computing. \citet{schilit1994}
+first described it as where the user is, who they are with and what
+resources are nearby. The definition most cited today is that of Dey.
+
+\begin{definitionbox}{Context}
+\emph{Context} is any information that can be used to characterize the
+situation of an entity. An entity is a person, place, or object that is
+considered relevant to the interaction between a user and an application,
+including the user and the application themselves \cite{dey2001context}.
+A system is \emph{context-aware} if it uses context to provide relevant
+information or services to the user, where relevancy depends on the
+user's task \cite{dey2001context,abowd1999}.
+\end{definitionbox}
+
+Several typologies make this definition operational
+(\cref{tab-context-typologies}). In education, context-awareness first
+appeared with mobile and ubiquitous learning, where the location and the
+surroundings of the learner change the relevant activities
+\cite{hwang2008}, and with context-aware recommender systems for learning
+\cite{verbert2012,adomavicius2011}.
+
+\begin{table}[htbp]
+\centering
+\caption{Typologies of context}
+\label{tab-context-typologies}
+\small
+\begin{tabularx}{\textwidth}{@{}L{3.6cm}Y@{}}
+\toprule
+\textbf{Source} & \textbf{Categories of context} \\
+\midrule
+\citet{schilit1994} & where you are, who you are with, what resources are nearby \\
+\citet{abowd1999} & primary context: location, identity, activity, time \\
+\citet{zimmermann2007} & individuality, activity, location, time, relations \\
+\citet{verbert2012} (learning) & computing, location, time, physical conditions, activity, resource, user, social relations \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\Cref{chap-lms} showed that Moodle also uses the word \emph{context}, for
+the place of a user in the structure of the site (course, activity). This
+organizational context is only one source of the learning context defined
+below.
+
+\subsection{Learner context and task context}
+\label{subsec-context-dims}
+
+For learning, the context can be grouped into six dimensions
+(\cref{tab-learning-context}). The first describes the learner; the others
+describe the situation in which they learn: the task, the course, the
+time, the device and the people around. Each dimension changes a different
+part of the adaptation.
+
+\begin{table}[htbp]
+\centering
+\caption{Dimensions of the learning context}
+\label{tab-learning-context}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.3cm}YYL{3.1cm}@{}}
+\toprule
+\textbf{Dimension} & \textbf{Examples} & \textbf{What it changes} & \textbf{Typical source in an LMS} \\
+\midrule
+Learner & level, mastery, goals, language, motivation & difficulty, depth of explanations, tone & grades, quiz answers, profile \\
+Activity or task & reading, exercise, revision before an exam & kind of help: hint or explanation & current activity, completion \\
+Pedagogical & course structure, prerequisites, teacher objectives & constraints on path and content & course sections, access restrictions \\
+Temporal & deadlines, time of day, inactivity, session history & urgency, session length, review & due dates, last access, logs \\
+Device and environment & mobile or desktop, connectivity, location & format, media, offline content & client information \\
+Social & alone or in a group, peers, teacher presence & individual or collaborative activity & groups, forums \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Most adaptive systems use only the first dimension, the learner's
+knowledge \cite{verbert2012,xie2019}. The temporal and pedagogical
+dimensions are, however, available in any LMS, and they matter: a
+deadline in two days or a missing prerequisite should change what a tutor
+proposes.
+
+\subsection{The context life cycle}
+\label{subsec-context-lifecycle}
+
+Context-aware systems manage context through a life cycle of four phases
+(\cref{fig-context-lifecycle}) \cite{perera2014}:
+
+\begin{itemize}
+  \item \textbf{Acquisition}: context is collected explicitly (forms,
+        questions to the learner) or implicitly (logs, interactions,
+        sensors), by polling a source or by receiving its events. In an
+        LMS, the activity traces are the main implicit source; the
+        \texttt{context} field of xAPI statements is a standard carrier
+        (\cref{sec-standards}).
+  \item \textbf{Modelling}: context is represented as key--value pairs,
+        markup, objects, ontologies or graphs \cite{strang2004,bettini2010};
+        more recently, embeddings and natural-language summaries are also
+        used.
+  \item \textbf{Reasoning}: new facts are derived, with rules, machine
+        learning or a language model (for example, \enquote{the next
+        section is ready} or \enquote{this learner is inactive}).
+  \item \textbf{Dissemination}: the context is delivered to the components
+        that use it, on request or by notification.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tikzpicture}[node distance=0.9cm and 1.6cm,
+  b/.style={bloc,text width=3.4cm,minimum height=1.5cm}]
+  \node[b] (acq) {\textbf{Acquisition}\\\footnotesize LMS logs, completion, grades, deadlines, app events};
+  \node[b,right=of acq] (mod) {\textbf{Modelling}\\\footnotesize key--value, objects, ontology, graph};
+  \node[b,below=of mod] (rea) {\textbf{Reasoning}\\\footnotesize rules, machine learning, LLM};
+  \node[b,below=of acq] (dis) {\textbf{Dissemination}\\\footnotesize to agents and interfaces};
+  \draw[arrow] (acq) -- (mod);
+  \draw[arrow] (mod) -- (rea);
+  \draw[arrow] (rea) -- (dis);
+  \draw[arrow] (dis) -- (acq);
+\end{tikzpicture}}
+\caption[The context life cycle]{The context life cycle, after
+\citet{perera2014}, with examples from a learning setting}
+\label{fig-context-lifecycle}
+\end{figure}
+
+\begin{summarybox}[Takeaway]
+Context is any information that characterizes the learner's situation. A
+useful learning context has several dimensions (learner, task,
+pedagogical, temporal, device, social), each with an identified source.
+Most adaptive systems use only the learner's knowledge, even though an LMS
+already holds deadlines, activity and course structure. This is an
+opportunity for our framework.
+\end{summarybox}
+
+% =====================================================================
 \section{AI and large language models in education}
 \label{sec-llm}
-\subsection{From language models to LLMs}
-\subsection{Educational uses: tutoring, generation, assessment}
-\subsection{Retrieval-augmented generation (RAG)}
-\subsection{Limits: hallucination, bias, privacy}
+% =====================================================================
 
+Artificial intelligence in education is older than language models.
+Before 2022, its applications in higher education fell into four areas:
+profiling and prediction, assessment, adaptive systems and personalization,
+and intelligent tutoring \cite{zawacki2019}. The same review noted how
+rarely educators were involved in these works. Large language models
+changed this landscape because one model can now perform many of these
+tasks in natural language.
+
+\subsection{From language models to LLMs}
+\label{subsec-llm-history}
+
+A \emph{language model} assigns a probability to a sequence of words, or
+predicts the next word given the previous ones. \Cref{tab-lm-history}
+summarizes the main steps that led from statistical models to current
+LLMs.
+
+\begin{table}[htbp]
+\centering
+\caption{From language models to large language models}
+\label{tab-lm-history}
+\small
+\begin{tabularx}{\textwidth}{@{}L{1.7cm}L{4.3cm}Y@{}}
+\toprule
+\textbf{Period} & \textbf{Step} & \textbf{What changed} \\
+\midrule
+1990s & $n$-gram models & word probabilities from counts of short sequences \\
+2003 & neural language model \cite{bengio2003} & words represented by learned vectors \\
+2013 & word embeddings \cite{mikolov2013} & reusable vectors capturing similarity of meaning \\
+2017 & Transformer \cite{vaswani2017} & attention instead of recurrence; parallel training on long texts \\
+2018--2019 & pre-training then fine-tuning: GPT, BERT \cite{radford2018,devlin2019} & one model pre-trained on raw text, adapted to many tasks \\
+2020 & GPT-3 \cite{brown2020}, scaling laws \cite{kaplan2020} & performance grows with size; tasks solved from a few examples in the prompt \\
+2022 & instruction tuning and RLHF \cite{ouyang2022}; ChatGPT & models that follow instructions and converse \\
+2023-- & open-weight models \cite{touvron2023,qwen3,gptoss2025} & models that an institution can run on its own servers \\
+2024-- & reasoning models \cite{deepseekr1} & longer intermediate reasoning before answering \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{definitionbox}{Large language model}
+A \emph{large language model} (LLM) is a Transformer-based language model
+with billions of parameters, pre-trained on very large text corpora to
+predict the next token, then tuned to follow instructions. It can perform
+tasks described in natural language without task-specific training
+\cite{brown2020,zhao2023survey}.
+\end{definitionbox}
+
+An application can specialize an LLM for a task in five ways
+(\cref{tab-llm-techniques}). They are combined in practice: the tutors of
+\cref{sec-related-work} all use prompting, most use retrieval, and few use
+fine-tuning.
+
+\begin{table}[htbp]
+\centering
+\caption{Ways of adapting an LLM to an educational task}
+\label{tab-llm-techniques}
+\small
+\begin{tabularx}{\textwidth}{@{}L{3.1cm}YY@{}}
+\toprule
+\textbf{Technique} & \textbf{Principle} & \textbf{Educational use and limit} \\
+\midrule
+Prompting & instructions and examples in the input; step-by-step reasoning \cite{brown2020,wei2022cot} & pedagogical instructions (\enquote{give a hint, not the answer}); fragile, no memory between sessions \\
+Structured output & the model returns data that follow a schema (for example JSON) & quiz items, classifications that code can check \\
+Tool use & the model calls functions: search, code execution, a database \cite{schick2023,yao2023react} & running the learner's code, reading grades; each call must be authorized \\
+Retrieval (RAG) & passages retrieved from a corpus are added to the prompt \cite{lewis2020} & answers grounded in the course (\cref{subsec-rag}) \\
+Fine-tuning & further training on task data, often with low-rank adapters \cite{hu2022lora} & tutoring style, domain vocabulary; needs data and computing power \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Educational uses: tutoring, generation, assessment}
+\label{subsec-llm-uses}
+
+The surveys organize the educational uses of LLMs around the learner, the
+teacher and adaptive learning \cite{wang2024llm4edu,kasneci2023}.
+\Cref{tab-llm-uses} summarizes them with representative evidence.
+
+\begin{table}[htbp]
+\centering
+\caption{Educational uses of LLMs and representative evidence}
+\label{tab-llm-uses}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.8cm}YY@{}}
+\toprule
+\textbf{Use} & \textbf{Examples} & \textbf{Evidence and caveats} \\
+\midrule
+Tutoring and explanation & conversational tutors, explanations at several levels, Socratic dialogue & gains when the tutor is designed pedagogically \cite{kestin2025}; harm when it simply gives answers \cite{bastani2025} \\
+Hints and feedback & hints on exercises, feedback on writing & LLM hints as effective as human-authored hints in algebra \cite{pardos2024}; human feedback still better on most criteria \cite{steiss2024} \\
+Content and question generation & exercises, quizzes aligned with objectives & teachers judge quizzes built with generated questions as good as handwritten ones \cite{elkins2024,doughty2024} \\
+Assessment and grading & short answers, essays, code & useful as a first pass; agreement with teachers varies with the task \cite{wang2024llm4edu} \\
+Teacher support & lesson planning, analysis of class difficulties & see \cref{subsec-teacher-side} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Two controlled studies frame the debate. \citet{kestin2025} report a
+randomized trial in an undergraduate physics course: students learned more,
+in less time, with an AI tutor designed with research-based pedagogical
+principles than in an active-learning class. Conversely,
+\citet{bastani2025} gave high school students either a plain GPT-4 chat or
+a tutor version with guardrails. Both improved practice performance, but
+when access was removed, the students who had used the plain chat
+performed worse on the exam than those who never had access; the guarded
+tutor largely removed this harm. The lesson is that an LLM helps learning
+only when it is constrained by pedagogy.
+
+This is also the design choice of tutors deployed at scale. The CS50
+course at Harvard deployed an assistant designed to guide students rather
+than give solutions \cite{liu2024cs50}. Google reframed pedagogy as
+\emph{pedagogical instruction following}, and experts preferred the
+resulting LearnLM model to general models in a range of learning scenarios
+\cite{learnlm2024}. Dialogue data show why such constraints are needed:
+when LLMs play the tutor, they tend to reveal the solution too early
+\cite{macina2023mathdial}.
+
+\subsection{Retrieval-augmented generation (RAG)}
+\label{subsec-rag}
+
+An LLM answers from what it memorized during training, which may be
+wrong, outdated or misaligned with a given course.
+
+\begin{definitionbox}{Retrieval-augmented generation}
+\emph{Retrieval-augmented generation} (RAG) retrieves, for each question,
+the most relevant passages of an external corpus and gives them to the
+LLM with the question, so that the answer is generated from these passages
+and can cite them \cite{lewis2020,gao2023rag}.
+\end{definitionbox}
+
+\Cref{fig-rag} shows the two phases of a RAG pipeline. During
+\emph{indexing}, documents are extracted, cut into chunks and turned into
+vectors by an embedding model \cite{reimers2019,chen2024bgem3}. During
+\emph{answering}, the question is embedded, the closest chunks are
+retrieved, inserted in the prompt, and the LLM generates an answer with
+references to them.
+
+\begin{figure}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tikzpicture}[node distance=0.45cm and 0.55cm,
+  b/.style={bloc,text width=2.2cm,minimum height=1.1cm,font=\footnotesize}]
+  % indexing
+  \node[b] (doc) {Course documents};
+  \node[b,right=of doc] (chk) {Extract and chunk};
+  \node[b,right=of chk] (emb) {Embed};
+  \node[b,blocstrong,right=of emb] (idx) {Index\\(vectors + text)};
+  \node[layer,fit=(doc)(chk)(emb)(idx),
+        label={[font=\footnotesize\bfseries,text=thaccent]left:Indexing}] (I) {};
+  % answering
+  \node[b,below=1.4cm of doc] (q) {Question};
+  \node[b,right=of q] (ret) {Retrieve: dense + keyword, fused};
+  \node[b,right=of ret] (aug) {Prompt with passages};
+  \node[b,right=of aug] (gen) {LLM answer with citations};
+  \node[layer,fit=(q)(ret)(aug)(gen),
+        label={[font=\footnotesize\bfseries,text=thaccent]left:Answering}] (A) {};
+  \draw[arrow] (doc) -- (chk); \draw[arrow] (chk) -- (emb); \draw[arrow] (emb) -- (idx);
+  \draw[arrow] (q) -- (ret); \draw[arrow] (ret) -- (aug); \draw[arrow] (aug) -- (gen);
+  \draw[arrow] (idx.south) |- ([yshift=0.35cm]ret.north) -- (ret.north);
+\end{tikzpicture}}
+\caption{Retrieval-augmented generation: indexing and answering}
+\label{fig-rag}
+\end{figure}
+
+Retrieval can be \emph{dense}, by similarity between embeddings
+\cite{karpukhin2020}, or \emph{sparse}, by keyword matching with scores
+such as BM25 \cite{robertson2009}. Dense retrieval captures paraphrases
+and works across languages with multilingual models \cite{chen2024bgem3};
+keyword retrieval is better for exact terms such as names of functions.
+\emph{Hybrid} retrieval combines both rankings, for example with reciprocal
+rank fusion \cite{cormack2009rrf}. Approximate nearest-neighbour indexes
+such as HNSW keep the search fast on large collections \cite{malkov2020}.
+
+RAG is evaluated on the retrieval (are the right passages found?) and on
+the generation. The RAGAS metrics include \emph{faithfulness}, the share of
+the claims of an answer that are supported by the retrieved passages
+\cite{es2024ragas}. In education, grounding has a pedagogical side:
+students preferred answers grounded in a textbook, but not when they were
+too close to its text \cite{levonian2023}.
+
+\subsection{Limits: hallucination, bias, privacy}
+\label{subsec-llm-limits}
+
+\Cref{tab-llm-limits} lists the limits of LLMs that matter most in
+education, with the mitigations proposed in the literature.
+
+\begin{table}[htbp]
+\centering
+\caption{Limits of LLMs in education and mitigations}
+\label{tab-llm-limits}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.8cm}YY@{}}
+\toprule
+\textbf{Limit} & \textbf{Risk in education} & \textbf{Mitigations} \\
+\midrule
+Hallucination \cite{ji2023hallucination} & a fluent but false explanation is learned & retrieval from the course, citations checked, refusal when the answer is not in the course, teacher review \\
+Giving the answer \cite{macina2023mathdial,bastani2025} & the learner practises less and learns less & hint modes, pedagogical instructions, guardrails \\
+Sycophancy \cite{sharma2024sycophancy} & the model agrees with a wrong answer & grading in code, not by the model \\
+Bias \cite{bender2021,gallegos2024} & unequal quality across groups and languages \cite{lai2023} & multilingual models, evaluation per language \\
+No memory of the learner & each request starts from zero & an external learner model given to the model \\
+Privacy \cite{carlini2021} & student data sent to a provider abroad & data minimization, local open-weight models \\
+Cost and latency & quotas, waiting time & smaller models, reuse of reviewed content \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Two of these limits have a local dimension. First, Algerian universities
+teach in Arabic, French and English \cite{benrabah2013}, while LLMs perform
+best in English \cite{lai2023}; Arabic-centric models exist
+\cite{sengupta2023jais}, but course material and learners' questions may
+mix languages. Second, the processing of students' personal data falls
+under Algerian Law 18-07 \cite{algeria_law1807}, which requires the
+consent of the persons concerned and regulates the transfer of personal
+data abroad. International frameworks point in the same direction: UNESCO
+recommends human oversight and the protection of learners' data
+\cite{unesco2023}, and the European AI Act classifies AI systems used to
+evaluate learning outcomes or to steer the learning process as high-risk
+\cite{euaiact2024}. Running an open-weight model inside the institution is
+one practical answer.
+
+\begin{summarybox}[Takeaway]
+LLMs bring what classical tutors lacked: free dialogue and the generation
+of explanations, hints and exercises. Used alone, however, they
+hallucinate, give answers away, forget the learner between requests and
+may send personal data abroad. They need a learner and context model,
+grounding in the course and pedagogical control around them. A
+multi-agent architecture is a natural way to provide them.
+\end{summarybox}
+
+% =====================================================================
 \section{Multi-agent systems}
 \label{sec-mas}
-\subsection{Agents and classical multi-agent systems}
-\subsection{LLM-based multi-agent systems}
-\subsection{Orchestration and collaboration patterns}
+% =====================================================================
 
+\subsection{Agents and classical multi-agent systems}
+\label{subsec-classical-mas}
+
+\begin{definitionbox}{Agent}
+An \emph{agent} is a computer system situated in an environment and
+capable of autonomous action in it to meet its objectives. A
+\emph{weak} notion of agency adds four properties: autonomy, reactivity to
+changes in the environment, pro-activeness (goal-directed initiative) and
+social ability, that is, interaction with other agents
+\cite{wooldridge1995}.
+\end{definitionbox}
+
+Agent architectures range from \emph{reactive} agents, which map
+perceptions to actions, to \emph{deliberative} agents, which reason on
+explicit beliefs, desires and intentions (BDI) \cite{rao1995}, with hybrid
+architectures in between.
+
+\begin{definitionbox}{Multi-agent system}
+A \emph{multi-agent system} (MAS) is a set of agents that interact in a
+shared environment, cooperating or competing, to solve problems that are
+beyond the capabilities of each of them \cite{ferber1999,wooldridge2009}.
+\end{definitionbox}
+
+Classical MAS research studied three questions. \emph{Communication}:
+agents exchange messages with an explicit performative, such as
+\emph{inform} or \emph{request}, standardized by the FIPA agent
+communication language \cite{fipa2002}. \emph{Coordination}: tasks are
+allocated by negotiation, as in the contract net protocol
+\cite{smith1980}, or through a shared data structure, the
+\emph{blackboard}, which every agent reads and writes \cite{nii1986}.
+\emph{Organization}: \citet{demazeau1995} describes a MAS by its agents,
+environment, interactions and organization (roles and structure).
+Platforms such as JADE implement these standards \cite{bellifemine2007}.
+
+In education, MAS have been used for decades: animated pedagogical agents
+that guide learners in virtual environments \cite{johnson2000}, and ITSs
+whose domain, learner and pedagogical models are separate agents. Their
+limit was the intelligence of each agent: rules and templates written by
+hand, with limited language abilities. Recent work still notes that
+integrating such platforms with modern AI and with LMSs is difficult
+\cite{lopezgoyez2026exploratory}.
+
+\subsection{LLM-based multi-agent systems}
+\label{subsec-llm-mas}
+
+\begin{definitionbox}{LLM-based agent}
+An \emph{LLM-based agent} uses a language model as its reasoning core,
+with a \emph{profile} (its role and instructions), a \emph{memory} of past
+interactions, a \emph{planning} ability and \emph{actions} on its
+environment through tools \cite{wang2024agents}.
+\end{definitionbox}
+
+The ReAct pattern interleaves reasoning steps and tool calls
+\cite{yao2023react}; agents can also reflect on their failures
+\cite{shinn2023} and simulate believable human behaviour
+\cite{park2023}. Putting several such agents together gives
+\emph{LLM-based multi-agent systems}. The survey of \citet{guo2024mas}
+describes them along four dimensions: the environment the agents act in;
+how agents are \emph{profiled} (predefined roles, generated or derived from
+data); how they \emph{communicate} (cooperative, debating or competitive
+paradigms; layered, centralized, decentralized or shared-pool structures);
+and how they acquire capabilities (feedback, memory, self-evolution).
+Well-known systems assign the roles of a software company
+\cite{hong2024metagpt,qian2024chatdev}, make two agents converse to solve a
+task \cite{li2023camel,wu2024autogen} or make agents debate to improve
+factuality \cite{du2024debate}.
+
+These systems have their own failure modes. \citet{guo2024mas} warn that
+the hallucination of one agent can spread to the others, and that such
+systems are hard to evaluate. An analysis of more than 1600 traces of seven
+frameworks found fourteen failure modes in three categories: system design
+issues, misalignment between agents and missing verification of the task
+\cite{cemri2025}. \Cref{tab-mas-compare} compares classical and LLM-based
+MAS.
+
+\begin{table}[htbp]
+\centering
+\caption{Classical and LLM-based multi-agent systems}
+\label{tab-mas-compare}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.8cm}YY@{}}
+\toprule
+\textbf{Aspect} & \textbf{Classical MAS} & \textbf{LLM-based MAS} \\
+\midrule
+Agent behaviour & rules, BDI plans, written by hand & language model guided by a profile and instructions \\
+Communication & typed messages (FIPA ACL) & natural language or structured outputs \\
+Coordination & protocols (contract net), blackboard & orchestrator, conversation, graph of steps, shared state \\
+Strengths & predictable, verifiable & open dialogue, generation, little authoring \\
+Weaknesses & costly to author, limited language & hallucination cascades, cost, nondeterminism, hard to test \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Why multiple agents in education?}
+A tutor must diagnose,
+explain, assess, plan and follow the learner's situation. Giving each of
+these roles to a specialized agent keeps each prompt short and focused,
+lets each agent be tested alone, and lets decisions that must be reliable,
+such as grading or mastery estimation, be computed in code. The surveys of
+the field see multi-agent systems as a main direction for education
+\cite{chu2025agents}, with the instructor acting as a special agent of the
+system \cite{wang2024llm4edu}.
+
+\subsection{Orchestration and collaboration patterns}
+\label{subsec-orchestration}
+
+The way agents are coordinated determines how predictable a system is. A
+useful distinction separates \emph{workflows}, in which code fixes the
+path between LLM calls, from \emph{agents}, in which the LLM decides its
+own next steps \cite{anthropic2024agents}. Workflows are more predictable
+and easier to test; agents are more flexible. \Cref{fig-orchestration} and
+\cref{tab-orchestration} present the main patterns
+\cite{guo2024mas,anthropic2024agents}.
+
+\begin{figure}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tikzpicture}[
+  a/.style={bloc,minimum width=0.62cm,minimum height=0.55cm,font=\footnotesize,inner sep=2pt},
+  o/.style={blocstrong,minimum width=0.62cm,minimum height=0.55cm,font=\footnotesize,inner sep=3pt},
+  ar/.style={-{Stealth[length=1.8mm]},thick,draw=thgray},
+  panel/.style={draw=thaccent,rounded corners=4pt,dashed,minimum width=3.0cm,minimum height=2.5cm},
+  t/.style={font=\footnotesize\bfseries,text=thprimary}]
+  % every panel is 3.0 cm x 2.5 cm, centred at (x, -0.9)
+  \foreach \x/\t in {0/(a) Router, 3.4/(b) Pipeline, 6.8/(c) Hierarchy, 10.2/(d) Graph, 13.6/(e) Shared state} {
+    \node[panel] at (\x,-0.9) {};
+    \node[t] at (\x,0.65) {\t};
+  }
+  % (a) router
+  \node[o] (r) at (0,-0.15) {Router};
+  \node[a] (r1) at (-0.85,-1.6) {A}; \node[a] (r2) at (0,-1.6) {B}; \node[a] (r3) at (0.85,-1.6) {C};
+  \draw[ar] (r) -- (r1); \draw[ar] (r) -- (r2); \draw[ar] (r) -- (r3);
+  % (b) pipeline
+  \node[a] (p1) at (2.45,-0.9) {A}; \node[a] (p2) at (3.4,-0.9) {B}; \node[a] (p3) at (4.35,-0.9) {C};
+  \draw[ar] (p1) -- (p2); \draw[ar] (p2) -- (p3);
+  % (c) hierarchy
+  \node[o] (h) at (6.8,-0.15) {Lead};
+  \node[a] (h1) at (6.1,-0.9) {S1}; \node[a] (h2) at (7.5,-0.9) {S2};
+  \node[a] (h3) at (5.75,-1.75) {W}; \node[a] (h4) at (6.45,-1.75) {W};
+  \node[a] (h5) at (7.5,-1.75) {W};
+  \draw[ar] (h) -- (h1); \draw[ar] (h) -- (h2);
+  \draw[ar] (h1) -- (h3); \draw[ar] (h1) -- (h4); \draw[ar] (h2) -- (h5);
+  % (d) graph with conditional edges
+  \node[a] (g1) at (9.35,-0.15) {A}; \node[a] (g2) at (10.5,-0.15) {B};
+  \node[a] (g3) at (9.75,-1.65) {C}; \node[a] (g4) at (11.0,-1.65) {D};
+  \draw[ar] (g1) -- (g2);
+  \draw[ar] (g2) -- node[right,font=\scriptsize,text=thgray]{if} (g4);
+  \draw[ar] (g2) -- node[left,font=\scriptsize,text=thgray]{else} (g3);
+  \draw[ar] (g3) -- (g4);
+  % (e) shared state
+  \node[o] (s) at (13.6,-0.95) {State};
+  \node[a] (s1) at (12.75,-0.15) {A}; \node[a] (s2) at (14.45,-0.15) {B};
+  \node[a] (s3) at (13.6,-1.85) {C};
+  \draw[ar,<->] (s1) -- (s); \draw[ar,<->] (s2) -- (s); \draw[ar,<->] (s3) -- (s);
+\end{tikzpicture}}
+\caption{Main orchestration patterns of multi-agent systems}
+\label{fig-orchestration}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Orchestration patterns}
+\label{tab-orchestration}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.5cm}YY@{}}
+\toprule
+\textbf{Pattern} & \textbf{How it works} & \textbf{Strengths and weaknesses} \\
+\midrule
+Router or supervisor & a central node classifies the request and sends it to one agent & simple, auditable if the routing is in code; single point of decision \\
+Sequential pipeline & each agent processes the output of the previous one & predictable; errors propagate down the chain \\
+Hierarchy & a lead agent delegates to sub-agents, which may delegate again & scales to complex tasks; harder to trace \\
+Graph or state machine & nodes are steps or agents, edges carry conditions written in code & explicit control, loops and checkpoints; more design work \\
+Debate or collaboration & agents discuss until they agree & may improve factuality \cite{du2024debate}; costly, may not converge \\
+Shared state or blackboard & agents read and write a common state \cite{nii1986} & consistent view of the learner; needs concurrency control \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Protocols}
+Agents interact with their environment through
+\emph{tool calling}, in which the model returns a structured call that the
+application executes. Two open protocols standardize these exchanges: the
+Model Context Protocol (MCP), published in 2024, connects a model to tools
+and data sources \cite{mcp2024}, and the Agent2Agent protocol (A2A),
+published in 2025, lets agents built with different frameworks exchange
+tasks \cite{a2a2025}. They play for LLM agents the role that FIPA ACL
+played for classical agents. Within one application, a shared state read
+and written by all agents remains the simplest way to keep them consistent.
+
+\subsection{Development frameworks}
+\label{subsec-frameworks}
+
+Several open-source frameworks implement these patterns.
+\Cref{tab-frameworks} compares the main ones as of November 2026.
+
+\begin{table}[htbp]
+\centering
+\caption[Frameworks for LLM-based multi-agent systems]{Frameworks for
+LLM-based multi-agent systems (status checked in November 2026)}
+\label{tab-frameworks}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{2.2cm}L{2.3cm}YYL{2.2cm}@{}}
+\toprule
+\textbf{Framework} & \textbf{Orchestration model} & \textbf{Strengths} & \textbf{Limits} & \textbf{Fit for our project} \\
+\midrule
+LangGraph \cite{langgraph_docs,langgraph1_2025} & graph and state machine & explicit nodes and conditional edges; typed state; checkpoints and durable execution; human-in-the-loop interrupts; streaming of tokens and custom events; version 1.0 since October 2025 & lower level: more code to write & high: routing in code, streaming of the agent steps \\
+CrewAI \cite{crewai_docs} & role-based crews, plus event-driven flows & quick to define agents by role, goal and backstory; flows for deterministic steps & autonomous crews are less predictable & medium \\
+AutoGen / Microsoft Agent Framework \cite{wu2024autogen,msagent_docs} & conversations between agents; workflows & research heritage of AutoGen; the Agent Framework, its successor, reached 1.0 in April 2026 & AutoGen is in maintenance; migration under way & medium \\
+OpenAI Agents SDK \cite{openai_agents_docs} & agents with handoffs & lightweight; guardrails and tracing built in & the routing is decided by the model through handoffs & medium \\
+Google ADK \cite{google_adk_docs} & tree of agents; sequential, parallel and loop agents & clear hierarchy; A2A support & oriented towards the Google ecosystem & medium \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{summarybox}[Takeaway]
+LLM-based multi-agent systems give each pedagogical role to a specialized
+agent, but they inherit the weaknesses of LLMs and add their own:
+hallucinations that cascade, misaligned agents, missing verification. For
+an educational system, an explicit graph whose routing is decided in code,
+around one shared learner state, offers the predictability and the
+traceability that teachers need. LangGraph supports this pattern directly,
+which is why it was chosen for our framework (\cref{chap-implementation}).
+\end{summarybox}
+
+% =====================================================================
 \section{Related work}
 \label{sec-related-work}
-\subsection{Platforms and products}
-\subsection{Research prototypes}
-\subsection{Comparison table}
+% =====================================================================
 
+The related work is analysed at three levels: products and platforms used
+at scale (\cref{subsec-products}), research prototypes
+(\cref{subsec-prototypes}) and tools that support teachers
+(\cref{subsec-teacher-side}). It ends with a comparison grid
+(\cref{subsec-comparison}). Four research works are analysed in depth
+because they are the closest to our objective: they combine several agents
+with generative AI or a rich context model, and they target integration
+with an LMS. We call them the \emph{primary works}: ELA Tutor
+\cite{lopezgoyez2026ela,lopezgoyez2026exploratory}, the interoperable
+architecture of \citet{khaddar2026ijacsa} (IJACSA-Arch), GenMentor
+\cite{wang2025genmentor} and CA-MA-DRL \cite{sharif2026camadrl}.
+
+\subsection{Platforms and products}
+\label{subsec-products}
+
+\Cref{tab-products} summarizes the main products. They fall into three
+groups. Adaptive platforms and ITSs adapt the path with strong but
+hand-built models. LLM tutors converse but keep a thin model of the
+learner. LMS vendors add generative AI for teachers, mostly to write
+content.
+
+\begin{table}[htbp]
+\centering
+\caption[AI products for learning]{AI products for learning (features from
+the vendors' documentation, checked in November 2026)}
+\label{tab-products}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{2.3cm}L{1.8cm}YY@{}}
+\toprule
+\textbf{Product} & \textbf{Type} & \textbf{Main AI features} & \textbf{Limits for our objective} \\
+\midrule
+ALEKS (McGraw Hill) \cite{aleks_site,doignon1999} & adaptive platform & adaptive assessment and path from knowledge space theory; periodic re-assessment & fixed content in a few domains; no dialogue \\
+MATHia (Carnegie Learning) \cite{ritter2007} & ITS & step-by-step mathematics tutoring; mastery estimated with BKT & one domain; hand-authored content \\
+Squirrel AI \cite{squirrelai_site} & adaptive platform & very fine-grained knowledge points linked in a graph; adaptive testing & closed; effectiveness reported by the vendor only \\
+Duolingo Max \cite{duolingomax2023} & language app & since March 2023, GPT-4 features: \enquote{Explain My Answer} and role-play conversations written by humans & languages only; no teacher \\
+Khanmigo (Khan Academy) \cite{khanmigo} & LLM tutor & tutor that guides with questions rather than answers; tools for teachers & tied to the Khan Academy content; limited context of the learner's course \\
+Study and learning modes \cite{openai_studymode,anthropic_education,learnlm2024} & general assistants & guided, Socratic modes in ChatGPT (2025), Claude (2025) and Gemini, based on LearnLM & no learner model, no link to the course or the LMS \\
+Moodle AI subsystem \cite{moodle_ai} & LMS & generate, summarize, explain; choice of providers including local models & isolated requests (\cref{subsec-moodle-ai}) \\
+D2L Lumi (Brightspace) \cite{d2l_lumi} & LMS & generation of quiz questions from course content, reviewed by the teacher & paid add-on; authoring help, no learner adaptation \\
+Canvas IgniteAI (Instructure) \cite{canvas_ignite} & LMS & AI features announced in 2025: summaries, translation, question authoring & features depend on the licence; no learner model \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Research prototypes}
+\label{subsec-prototypes}
+
+The four primary works are presented first, then the other LLM multi-agent systems for learning.
+
+\subsubsection{ELA Tutor}
+ELA Tutor \cite{lopezgoyez2026ela,lopezgoyez2026exploratory} is a generative-AI tutoring system for higher education, built
+as a multi-agent architecture on the low-code automation platform n8n and
+connected to Moodle through a Django middleware with single sign-on.
+Requests go through a reception agent (normalization, language detection
+and translation, retrieval of the Moodle context of the student) and an
+\emph{intelligent switching router} that sends each request, according to
+its type, the learner profile and its complexity, to a Pedagogical,
+Technical, Performance Analysis or Adaptive Empathic agent. An
+Ethical--Pedagogical filter and a synthesis agent check and merge the
+responses before delivery \cite{lopezgoyez2026exploratory}. A first study
+added a reinforcement-learning meta-agent that learns which agent to select
+from the user's state and interaction patterns; it improved efficiency,
+response relevance and agent selection in a real and a simulated case
+study \cite{lopezgoyez2026ela}. The principle that rules and code decide
+while the LLM writes the text comes from this line of work. Answers rely
+on a curated base of institutional material completed by Wikipedia, and
+no citations are shown. The evaluations measured perception: a
+Likert-scale questionnaire with 150 students (usability 3.77/5,
+satisfaction and usefulness 3.82/5) \cite{lopezgoyez2026ela} and
+interviews with 20 teachers, of whom 85\,\% found the system adapted to
+their teaching but only half fully trusted its content
+\cite{lopezgoyez2026exploratory}. The teachers asked for more control over
+the content (8 of 20) and for dashboards; learning outcomes are left to
+future work.
+
+\subsubsection{IJACSA-Arch}
+The work of \citet{khaddar2026ijacsa} designs an
+interoperable architecture in four layers: the LMS, an interoperability
+layer (LTI 1.3, xAPI with a learning record store, cmi5, a SCORM adapter),
+a layer of agents (tutor, assessment, recommender, monitoring,
+collaboration, profile) implemented as microservices that coordinate
+through an XMPP message bus, and an analytics layer that computes features
+such as engagement, inactivity and mastery progression. Agents decide with
+explicit rules, analytics-derived features and optional machine-learning
+models; generative AI writes explanations and remediation messages under
+guardrails that the paper assumes. It is the most complete
+standards-based design, and it keeps the LMS core untouched. It was
+validated only through four scenarios (dropout risk, remediation after a
+failed quiz, teacher dashboard, group work); the authors state that it
+does not yet provide empirical evidence on performance or educational
+effectiveness.
+
+\subsubsection{GenMentor}
+GenMentor \cite{wang2025genmentor} targets
+goal-oriented learning, mainly for professionals. A fine-tuned LLM maps
+the learner's goal to the skills it requires; the skill gap is then
+identified, a learning path is scheduled from a dynamic profile of the
+learner, and the content of each session is generated through an
+exploration--drafting--integration process. The learner profile is
+maintained by an LLM in natural language. GenMentor was evaluated with
+automated metrics, human ratings and a study with professional learners,
+centred on goal alignment and content quality. It runs as a standalone
+application, outside any LMS, and gives no role to a teacher.
+
+\subsubsection{CA-MA-DRL}
+CA-MA-DRL \cite{sharif2026camadrl} fuses
+multimodal data from LMSs, virtual classrooms and AR/VR environments into
+a context representation of the learner's cognitive, affective and
+behavioural states. Student and teacher agents learn pedagogical policies
+with deep reinforcement learning (DQN and actor--critic) and negotiate
+through formal protocols, and a human-in-the-loop model keeps the
+instructor's authority through explainable AI. It is the richest context
+model of the review, but it uses no language model, and the authors
+present it as a conceptual architecture with an evaluation protocol rather
+than a completed empirical study.
+
+\subsubsection{Other systems: learner modelling and path planning}
+\emph{GraphMASAL}
+coordinates a Diagnostician, a Planner and a Tutor with LangGraph around a
+dynamic knowledge graph of the learner, with graph-grounded retrieval and a
+planner with an approximation guarantee; it was evaluated with simulated
+student profiles \cite{zeng2025graphmasal}. \emph{MALPP} uses three LLM
+agents (learner analytics, path planning, reflection), constrained by
+cognitive load theory and the zone of proximal development; a risk
+prediction model and a knowledge tracing model feed the agents, and the
+evaluation is offline, on the MOOCCubeX dataset \cite{xu2026malpp}.
+\emph{IntelliCode} is the closest design to ours for the learner model:
+six agents (assessment, profiling, graduated hints, curriculum, spaced
+repetition, engagement) act as pure transformations of a centralized,
+versioned learner state, with a single writer; mastery is updated by a
+BKT-inspired rule that the authors describe as needing calibration, and
+the system, a programming tutor, was validated with simulated learners
+\cite{david2025intellicode}.
+
+\subsubsection{Other systems: dialogue and classroom}
+\emph{Ruffle\&Riley} induces an
+editable tutoring script from a lesson text and plays it with two agents,
+a student and a professor, in a learning-by-teaching dialogue. In two
+online studies with 200 participants, users reported high engagement, but
+there was no significant difference in short-term learning gains compared
+with reading the lesson \cite{schmucker2024ruffle}. \emph{SimClass} and
+\emph{MAIC} simulate a whole class with teacher, assistant and classmate
+agents; MAIC reports observations from more than 500 students at Tsinghua
+University \cite{zhang2025simclass,yu2024maic}. A two-agent GPT-4 system
+infers the preferences of middle school students and rewrites science
+passages accordingly; its pilot randomized trial with 23 students suggests
+that students may prefer texts matched to their profile, without measuring
+learning \cite{vaccaro2025stem}.
+
+\subsubsection{Research agenda and simulation}
+A doctoral project plans
+generative agents playing students, instructors and learning resources,
+with fine-tuning and RAG, to be evaluated in a blended postgraduate course
+\cite{matilla2025lasi}. Generative agents are also used as simulated
+learners, to evaluate adaptive algorithms before deploying them with real
+students \cite{gao2025agent4edu,kaser2024}.
+
+\subsection{Teacher-side AI}
+\label{subsec-teacher-side}
+
+The systems above serve the learner. A second line of work supports the
+teacher, which the framework of this thesis also does.
+
+\begin{itemize}
+  \item \textbf{Question generation.} Teachers preferred writing quizzes
+        with questions generated for given levels of Bloom's taxonomy,
+        and these quizzes were not worse than handwritten ones
+        \cite{elkins2024}; GPT-4 multiple-choice questions for programming
+        courses were comparable to human ones \cite{doughty2024}. LMS
+        vendors now offer such generation with teacher review
+        \cite{d2l_lumi}.
+  \item \textbf{Feedback and grading.} Expert feedback on student essays
+        remained better than ChatGPT feedback on four of five criteria
+        \cite{steiss2024}, which argues for keeping the teacher in the
+        loop.
+  \item \textbf{Dashboards and early warning.} Course Signals warned
+        students at risk at Purdue \cite{arnold2012}; reviews of learning
+        analytics dashboards find them widespread but weakly grounded in
+        learning theory \cite{matcha2020}; real-time tools can make
+        teachers and AI complementary in class \cite{holstein2019}.
+  \item \textbf{Analysis of difficulties and course improvement.} Item
+        statistics, such as the facility and discrimination indices of
+        Moodle's quiz report \cite{moodle_quizstats,crocker1986}, point to
+        problematic questions but not to their causes in the material.
+        Redesigning a tutor from the analysis of learners' data improved
+        learning in a controlled study \cite{koedinger2013}. Recently, an
+        LLM combined quiz results, response patterns and lecture
+        transcripts to characterize misconceptions in five online courses
+        with 3,802 enrolments; experts rated the misconceptions as
+        excellent, and teachers found the identification of difficult
+        topics useful \cite{parker2026}.
+  \item \textbf{Human in the loop.} In a randomized trial with 900 tutors
+        and 1,800 students, an assistant suggesting expert strategies to
+        human tutors increased the share of students mastering topics by
+        4 percentage points \cite{wang2024tutorcopilot}. Explainable AI in
+        education aims to keep such decisions understandable to teachers
+        \cite{khosravi2022}.
+\end{itemize}
+
+These tools remain separate from the learner-facing tutors: none uses the
+difficulties observed by a tutoring system to point the teacher to the
+parts of the course that cause them and to propose changes for the teacher
+to validate.
+
+\subsection{Comparison table}
+\label{subsec-comparison}
+
+\Cref{tab-related-overview} describes the research prototypes, and
+\cref{tab-related-grid} compares them against eight criteria derived from
+the analysis above: the use of LLM agents, an explicit context model,
+knowledge tracing, proactive behaviour, teacher control, grounding with
+citations, integration into a real LMS and the evaluation of learning.
+\Cref{chap-contribution} adds our framework to this comparison
+(\cref{tab-related-compare}).
+
+\begin{table}[htbp]
+\centering
+\caption{Overview of the research prototypes}
+\label{tab-related-overview}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{2.2cm}L{0.7cm}YYY@{}}
+\toprule
+\textbf{Work} & \textbf{Year} & \textbf{Agents and architecture} & \textbf{Learner and context model} & \textbf{Evaluation} \\
+\midrule
+ELA Tutor \cite{lopezgoyez2026ela,lopezgoyez2026exploratory} & 2026 & n8n flows; router (rules, RL meta-agent); pedagogical, technical, analysis, empathic, ethical agents; Moodle via Django & interaction history, profile, Moodle progress & perception: 150 students, 20 teachers \\
+IJACSA-Arch \cite{khaddar2026ijacsa} & 2026 & microservice agents on an XMPP bus; LTI 1.3, xAPI, LRS & engagement and progression features & four scenarios, no deployment \\
+GenMentor \cite{wang2025genmentor} & 2025 & skill gap, path scheduling, content creation agents; fine-tuned LLM & natural-language profile, goals & automated, human ratings, professionals \\
+CA-MA-DRL \cite{sharif2026camadrl} & 2026 & student and teacher DRL agents; negotiation; no LLM & multimodal cognitive, affective, behavioural state & conceptual; capability analysis \\
+GraphMASAL \cite{zeng2025graphmasal} & 2025 & Diagnostician, Planner, Tutor (LangGraph) & dynamic knowledge graph & simulated profiles \\
+MALPP \cite{xu2026malpp} & 2026 & analytics, planning, reflection agents & KT model, risk prediction, cognitive load & offline dataset \\
+IntelliCode \cite{david2025intellicode} & 2025 & six agents, single-writer state graph & versioned state: mastery, misconceptions, reviews, engagement & simulated learners \\
+Ruffle\&Riley \cite{schmucker2024ruffle} & 2024 & student and professor agents, tutoring script & none & 200 participants, pre/post-test \\
+SimClass, MAIC \cite{zhang2025simclass,yu2024maic} & 2024--25 & teacher, assistant, classmate agents & course material & real courses, interaction analysis \\
+STEM texts \cite{vaccaro2025stem} & 2025 & profiler and rewrite agents (GPT-4) & preferences & pilot RCT, 23 students \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption[Comparison grid of the research prototypes]{Comparison grid of
+the research prototypes (\cyes: yes, \cpartly: partial or design only,
+\cno: no, n/r: not reported, n/a: not applicable)}
+\label{tab-related-grid}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{2.4cm}*{8}{>{\centering\arraybackslash}X}@{}}
+\toprule
+\textbf{Work} & \textbf{LLM agents} & \textbf{Context model} & \textbf{Know\-ledge tracing} &
+  \textbf{Pro\-active} & \textbf{Teacher control} & \textbf{Ground\-ing, cita\-tions} &
+  \textbf{Real LMS} & \textbf{Learn\-ing eval.} \\
+\midrule
+ELA Tutor      & \cyes    & \cpartly & \cno     & \cno     & \cpartly & \cpartly & \cyes    & \cno \\
+IJACSA-Arch    & \cpartly & \cpartly & \cpartly & \cpartly & \cpartly & \cpartly & \cpartly & \cno \\
+GenMentor      & \cyes    & \cpartly & \cno     & \cno     & \cno     & n/r      & \cno     & \cno \\
+CA-MA-DRL      & \cno     & \cpartly & \cpartly & \cpartly & \cpartly & n/a      & \cpartly & \cno \\
+\midrule
+GraphMASAL     & \cyes    & \cpartly & \cpartly & \cno     & n/r      & \cpartly & \cno     & \cno \\
+MALPP          & \cyes    & \cpartly & \cpartly & \cpartly & n/r      & n/r      & \cno     & \cno \\
+IntelliCode    & \cyes    & \cpartly & \cpartly & \cpartly & n/r      & n/r      & \cno     & \cno \\
+Ruffle\&Riley  & \cyes    & \cno     & \cno     & \cno     & \cpartly & \cpartly & \cno     & \cyes \\
+SimClass, MAIC & \cyes    & \cno     & \cno     & n/r      & \cpartly & \cpartly & \cno     & n/r \\
+STEM texts     & \cyes    & \cpartly & \cno     & \cno     & n/r      & \cpartly & \cno     & \cpartly \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{summarybox}[Takeaway]
+Products adapt with rigid models or converse without a learner model.
+Research multi-agent tutors are recent (2024--2026) and usually cover one
+aspect: the path, the content or the dialogue. They model the learner's
+knowledge, rarely the learner's situation in a course; they are rarely
+integrated into a real LMS; they rarely close the loop with the teacher;
+and none of them has shown a learning gain.
+\end{summarybox}
+
+% =====================================================================
 \section{Synthesis and positioning}
 \label{sec-synthesis}
+% =====================================================================
 
+\subsection{Identified gaps}
+\label{subsec-gaps}
+
+The comparison of \cref{sec-related-work} reveals eight gaps, G1 to G8
+(\cref{tab-gaps}). \Cref{chap-contribution} maps each of them to the
+contributions of this work.
+
+\begin{table}[htbp]
+\centering
+\caption{Gaps identified in the literature}
+\label{tab-gaps}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{0.7cm}L{3.3cm}YL{3.0cm}@{}}
+\toprule
+\textbf{Gap} & \textbf{Statement} & \textbf{Observation} & \textbf{Need for our framework} \\
+\midrule
+G1 & No LLM multi-agent system has an explicit, multi-dimensional context model &
+  The richest learner states (IntelliCode, GraphMASAL) describe knowledge, errors and engagement, not the learner's situation in a course (deadlines, activity, prerequisites, teacher objectives). The only multi-dimensional context model (CA-MA-DRL) is used by no LLM and was not implemented. &
+  an explicit context model with identified sources, shared by all agents \\
+G2 & LLM agents are weakly connected to knowledge tracing &
+  Profiles written by an LLM (GenMentor), no mastery estimate (ELA Tutor), a BKT-inspired rule that needs calibration (IntelliCode), a KT model used offline (MALPP). None feeds a calibrated estimate of mastery to agents running in an LMS. &
+  an interpretable knowledge tracing model behind the agents \\
+G3 & Adaptation covers one dimension at a time, rarely inside a real LMS &
+  Path (GenMentor, GraphMASAL, MALPP), dialogue (ELA Tutor, Ruffle\&Riley) or content (STEM texts); only ELA Tutor runs in Moodle, and the most complete interoperable design was not built. &
+  specialized agents adapting path, content and feedback together, integrated with Moodle \\
+G4 & Tutoring is reactive &
+  Tutors wait for the learner's question. Initiative is limited to review scheduling (IntelliCode), offline risk alerts (MALPP) or rules in designs (IJACSA-Arch, CA-MA-DRL); no running system acts on the deadlines and inactivity known to the LMS. &
+  interventions triggered by the context \\
+G5 & No evidence of learning effect &
+  The primary works measure perception or nothing; Ruffle\&Riley found no significant gain; gains are shown for carefully designed single tutors \cite{kestin2025}, and harm for unguarded ones \cite{bastani2025}. &
+  an evaluation plan with learning outcomes \\
+G6 & Weak teacher control &
+  Teachers ask for control over content (ELA Tutor), get dashboards (IJACSA-Arch) or nothing (GenMentor); teacher-side tools are separate from tutors and do not propose changes to the material. &
+  the teacher reviews generated content, sets objectives and validates material improvements \\
+G7 & Grounding and reliability across agents are vague or unmeasured &
+  Curated sources plus Wikipedia without citations (ELA Tutor), assumed guardrails (IJACSA-Arch); hallucination cascades between agents \cite{guo2024mas,cemri2025} are not measured. &
+  retrieval from the course, citations checked in code, refusal, validated generation \\
+G8 & Local context ignored: languages, data protection &
+  No system is evaluated with Arabic or French course material; most send student data to proprietary cloud models, an issue under Law 18-07. &
+  multilingual support and a local-model option \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+These gaps can be stated in one sentence: no existing work combines
+specialized LLM agents with an explicit, shared model of the learner and
+of the learner's context, fed by knowledge tracing, that adapts the path,
+the content and the feedback together inside a real LMS, while keeping the
+teacher in control of the content and of the course material.
+
+\subsection{Open challenges}
+\label{subsec-challenges}
+
+Building such a system raises challenges of four kinds:
+
+\begin{itemize}
+  \item \textbf{Technical}: hallucinations and their propagation between
+        agents; reliability of structured outputs; latency and cost of
+        hosted models; coordination failures and loops between agents
+        \cite{cemri2025}; keeping one consistent learner state when
+        several agents update it; the cold start of a new learner or a new
+        course.
+  \item \textbf{Pedagogical}: avoiding over-help, that is, giving the
+        answer instead of guiding \cite{bastani2025}; staying aligned with
+        the curriculum and the teacher's objectives; measuring real
+        learning, not only satisfaction.
+  \item \textbf{Ethical and legal}: privacy of learners' data under Law
+        18-07 \cite{algeria_law1807}; bias and fairness across languages
+        and groups \cite{gallegos2024}; transparency of the decisions
+        \cite{khosravi2022}; academic integrity.
+  \item \textbf{Practical}: access to real learners and data during a
+        final-year project; support of Arabic, French and English; the
+        acceptance of an external tool by the institution.
+\end{itemize}
+
+\subsection{How such systems are evaluated}
+\label{subsec-evaluation}
+
+The literature evaluates adaptive and LLM-based learning systems on five
+levels (\cref{tab-evaluation}). Few works cover more than two of them.
+
+\begin{table}[htbp]
+\centering
+\caption{Evaluation of adaptive and LLM-based learning systems}
+\label{tab-evaluation}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.9cm}YY@{}}
+\toprule
+\textbf{Level} & \textbf{Metrics} & \textbf{Instruments and data} \\
+\midrule
+Learning outcomes & pre-test and post-test, normalized learning gain \cite{hake1998gain}, time to mastery & controlled or quasi-experimental designs with a comparison group \cite{kestin2025,bastani2025} \\
+Learner model & AUC of next-answer prediction & public datasets: ASSISTments \cite{feng2009}, EdNet \cite{choi2020ednet}, OULAD \cite{kuzilek2017} \\
+Generated content & correctness, faithfulness to the sources \cite{es2024ragas}, pedagogical quality & expert rating; LLM-as-a-judge, with care \cite{zheng2023judge} \\
+User experience & usability, satisfaction, trust & SUS questionnaire \cite{brooke1996sus}, interviews \cite{lopezgoyez2026exploratory} \\
+System & latency, cost, robustness & logs, load tests \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Before involving real students, simulated learners can test the behaviour
+of a system at a low cost \cite{kaser2024,gao2025agent4edu}; their results
+must then be confirmed with people. Our evaluation plan follows these
+levels (\cref{sec-c-limits}).
+
+\subsection{Positioning}
+\label{subsec-positioning}
+
+\begin{summarybox}[Positioning of this work]
+One-to-one tutoring is the most effective form of learning, but it does
+not scale. Adaptive platforms and ITSs adapt the path with rigid,
+hand-built models; LLM tutors converse naturally but lack a structured
+learner model and pedagogical control; recent LLM multi-agent tutors
+address parts of the problem but do not model the learner's situation in a
+course, are rarely part of a real LMS and leave the teacher aside.
+\par\medskip
+We propose a context-aware, LLM-based multi-agent framework in which
+specialized agents share one explicit model of the learner and of the
+learner's context, fed by knowledge tracing, to adapt the path, the
+content and the feedback; in which decisions are taken in code and the
+language model writes grounded, cited text; which feeds the learners'
+difficulties back to the teacher to improve the course material under
+human validation; and which is integrated with Moodle, the platform of
+Algerian universities, without modifying its core.
+\end{summarybox}
+
+% =====================================================================
 \section*{Conclusion}
 \addcontentsline{toc}{section}{Conclusion}
+% =====================================================================
+
+This chapter reviewed the foundations and the state of the art on which
+our framework builds. Adaptive learning and intelligent tutoring systems
+provide interpretable learner models, such as Bayesian knowledge tracing,
+and a proven architecture, but at a high authoring cost. Context-awareness
+offers a way to describe the learner's situation, of which LMSs already
+hold a large part. Large language models bring dialogue and generation, at
+the price of hallucinations, over-help and privacy risks that call for
+grounding and pedagogical control. Multi-agent systems organize these
+functions into specialized, testable agents, provided that their
+orchestration stays explicit.
+
+The analysis of the related work showed that no existing system combines
+these elements: an explicit context model shared by LLM agents, knowledge
+tracing behind them, proactive interventions, teacher control and
+integration into a real LMS. The eight gaps identified in
+\cref{subsec-gaps} define the requirements of our framework. The next
+chapter presents the contributions that address them.
