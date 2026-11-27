@@ -21,7 +21,7 @@
     6/{G6 weak teacher control},
     7/{G7 grounding and reliability},
     8/{G8 language, privacy, local context}} {
-    \node[gap] (g\i) at (0, -\i*1.25) {\t};
+    \node[gap] (g\i) at (0, -\i*1.45) {\t};
     \fill[k\i] (g\i.east) circle (1.3pt);
   }
   % contributions
@@ -34,17 +34,19 @@
   \node[impl] (c7) at (10.5,-5.95)  {C7 teacher in the loop};
   \node[impl] (c8) at (10.5,-6.85)  {C8 grounding and guardrails};
   \node[part] (c9) at (10.5,-7.75)  {C9 multilingual (FR/EN; Arabic later)};
-  \node[part] (c10) at (10.5,-8.65) {C10 Moodle integration (LTI 1.3 later)};
-  \node[impl, very thick] (cm) at (10.5,-9.55) {Material Improvement agent};
-  \node[fut] (ce) at (10.5,-10.45) {Learning-gain evaluation};
+  \node[impl] (c10) at (10.5,-8.65) {C10 Moodle integration (LTI 1.3, grades back)};
+  \node[impl] (c11) at (10.5,-9.55) {C11 explainable personalisation (goal, path, style)};
+  \node[impl] (c12) at (10.5,-10.45) {C12 early warning; the teacher decides};
+  \node[impl, very thick] (cm) at (10.5,-11.35) {Material Improvement agent};
+  \node[part] (ce) at (10.5,-12.25) {Learning-gain evaluation (simulated; pilot ready)};
   % edges (gap -> contribution): smooth curves coloured by gap
-  \foreach \g/\c in {1/c1,2/c1,1/c2,4/c2,2/c3,3/c4,4/c5,6/c6,7/c6,6/c7,7/c8,8/c8,8/c9,3/c10,6/cm,7/cm,5/ce}
+  \foreach \g/\c in {1/c1,2/c1,1/c2,4/c2,2/c3,3/c4,4/c5,6/c6,7/c6,6/c7,7/c8,8/c8,8/c9,3/c10,1/c11,3/c11,6/c11,4/c12,6/c12,6/cm,7/cm,5/ce}
     \draw[k\g, thick, -{Stealth[length=1.8mm]}, opacity=0.9]
       (g\g.east) .. controls +(2.2,0) and +(-2.2,0) .. (\c.west);
   % headers and legend
   \node[font=\footnotesize\bfseries, text=pLms] at (0,-0.35) {Gaps in the literature};
   \node[font=\footnotesize\bfseries, text=pInk] at (10.5, 0.25) {Contributions of this work};
-  \node[note, anchor=north west, text=pInk] at (-2.8,-10.8)
+  \node[note, anchor=north west, text=pInk] at (-2.8,-12.8)
     {\tikz[baseline=(b.base)]\node[impl, minimum width=6mm, text width=4mm, minimum height=3mm, inner ysep=1pt] (b) {\strut};\ implemented \quad
      \tikz[baseline=(b.base)]\node[part, minimum width=6mm, text width=4mm, minimum height=3mm, inner ysep=1pt] (b) {\strut};\ partial \quad
      \tikz[baseline=(b.base)]\node[fut, minimum width=6mm, text width=4mm, minimum height=3mm, inner ysep=1pt] (b) {\strut};\ future work};
