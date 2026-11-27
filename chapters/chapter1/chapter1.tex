@@ -110,7 +110,7 @@ In Algeria, the Covid-19 pandemic forced universities to move quickly to
 distance teaching in 2020. They relied on several tools, including Moodle,
 Google Classroom and videoconferencing services \cite{kerrouzi2023}. Since
 then, blended teaching has become established in many institutions, and
-Moodle has remained the most widespread institutional platform.
+Moodle has remained a widely used institutional platform.
 
 \subsection{Stakeholders in online learning}
 \label{subsec-stakeholders}
@@ -340,7 +340,10 @@ platform, while passing on the launch context.
 The QTI standard (\foreign{Question and Test Interoperability}) describes
 questions and tests in an XML format so that they can be exchanged between
 platforms \cite{qti3}. It matters for our work because questions generated
-by an assessment agent will have to be imported into a question bank.
+by an assessment agent could be exported in this format to a Moodle
+question bank. In our framework, the generated questions stay in the
+framework's own question bank, where the teacher reviews them; QTI export
+is a possible extension.
 
 \subsection{Comparative summary}
 
@@ -363,9 +366,9 @@ xAPI (IEEE 9274.1.1) & ADL, IEEE & Record varied learning experiences in
 cmi5 & ADL & Launch content from an LMS on top of xAPI &
   Medium: useful if generated content is delivered as packages \\
 LTI 1.3 and Advantage & 1EdTech & Launch an external tool securely, return
-  grades & High: embeds the framework's interface in Moodle \\
+  grades & High: embeds the framework's interface in Moodle (used) \\
 QTI 3.0 & 1EdTech & Exchange questions and tests &
-  Medium: export of generated questions \\
+  Medium: possible export of generated questions \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -455,10 +458,10 @@ Chamilo         & \cyes    & \cyes    & \cpartly & \cpartly & \cpartly & Organiz
 official documentation before submission.}
 
 Moodle is the only platform that combines fully open code, self-hosting,
-full access to logs and complete support for the standards. It is also the
-platform already in place in most Algerian universities. These two reasons
-justify choosing it as the integration and validation platform for our
-framework.
+full access to logs and complete support for the standards. It is also
+widely used in Algerian universities, which relied on it when teaching
+moved online in 2020 \cite{kerrouzi2023}. These two reasons justify
+choosing it as the integration and validation platform for our framework.
 
 % =====================================================================
 \section{A detailed study of Moodle}
@@ -475,10 +478,11 @@ Version 1.0 was released in 2002. The project is now led by Moodle Pty Ltd
 
 Moodle publishes two major releases per year. Some releases receive
 long-term support (LTS): this is the case of Moodle 4.5, released in
-October 2024 and supported until October 2027. The 5.x branch followed
-from 2025 \cite{moodle_versions}. Both points matter for a final-year
-project: the version used must include the AI subsystem (introduced in
-4.5) and remain supported for the whole duration of the project.
+October 2024, which receives security fixes until October 2027. The 5.x
+branch followed from 2025 \cite{moodle_versions}. A final-year project
+needs a version that stays supported for its whole duration, which is why
+our framework targets Moodle 4.5 LTS. This version is also the first to
+include the AI subsystem (\cref{subsec-moodle-ai}).
 
 \subsection{Technical architecture}
 
@@ -487,17 +491,19 @@ database (PostgreSQL, MySQL, MariaDB or Microsoft SQL Server) and
 on a data directory (\texttt{moodledata}) that holds uploaded files, caches and
 sessions. The whole platform is organized as \emph{plugins}: the core
 provides shared services, and each visible feature is a plugin of a given
-type. \Cref{tab-moodle-plugins} lists the plugin types most useful for our
-project.
+type. \Cref{tab-moodle-plugins} lists the plugin types that could host
+adaptive features. Our framework does not use them: it runs as an external
+service and integrates through web services and LTI
+(\cref{subsec-moodle-integration}), so no code is installed in Moodle.
 
 \begin{table}[htbp]
 \centering
-\caption{Main Moodle plugin types and their use in our project}
+\caption{Main Moodle plugin types and the extensions they could host}
 \label{tab-moodle-plugins}
 \small
 \begin{tabularx}{\textwidth}{@{}L{2.6cm}L{2.6cm}Y@{}}
 \toprule
-\textbf{Type} & \textbf{Prefix} & \textbf{Possible use in our project} \\
+\textbf{Type} & \textbf{Prefix} & \textbf{Possible extension point} \\
 \midrule
 Activity        & \texttt{mod}          & Activity dedicated to the tutor or to the adaptive path \\
 Block           & \texttt{block}        & Recommendations shown on the course page \\
@@ -545,8 +551,12 @@ without modifying its core. They are summarized in
   \item \textbf{Events and logs.} Every significant action (viewing a
         resource, submitting an assignment, attempting a quiz) triggers an
         event. Events are recorded in the logs and can be caught by
-        observers written in a plugin \cite{moodle_events}. They are the
-        main source of the traces that will feed the learner model.
+        observers written in a plugin \cite{moodle_events}. Moodle 4.5,
+        however, has no web service that reads the logs, so an external
+        service that installs nothing in Moodle cannot read them directly.
+        Our framework therefore builds its traces from the web services
+        (completion, quiz grades) and from the activity in its own
+        interface; a log observer is a possible extension.
   \item \textbf{LTI.} Moodle can act as an LTI platform and launch an
         external tool from a course, or publish its own activities as a
         tool for other platforms. Version 1.3 and the LTI Advantage
@@ -729,7 +739,7 @@ Little help to improve materials & The same difficulties recur from one
   cohort to the next & Analysis of materials and proposals approved by the
   teacher \\
 Scattered data & Costly exploitation of traces & A single integration
-  layer (web services, events, xAPI) \\
+  layer (web services, LTI 1.3) \\
 \bottomrule
 \end{tabularx}
 \end{table}
