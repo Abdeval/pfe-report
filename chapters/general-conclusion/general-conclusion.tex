@@ -4,9 +4,64 @@
 \unnumberedchapter{General Conclusion and Future Work}
 \label{chap-conclusion}
 
-\todonote{Summary of the work, answer to the problem statement, limits.}
+This thesis set out to personalize learning inside an existing LMS with
+an LLM-based, context-aware multi-agent framework, while keeping the
+decisions explainable and the teacher in control. The study of LMSs
+showed that Moodle offers a reliable infrastructure and open integration
+points, but models neither the learner nor the learner's context. The
+state of the art showed that classical tutoring systems have
+interpretable learner models but rigid content, that LLMs converse but
+need grounding and pedagogical control, and that recent multi-agent
+tutors rarely model the learner's situation, rarely run in a real LMS and
+rarely measure learning.
+
+The framework answers the question with one principle: \emph{code
+decides, the language model writes, the teacher validates}. All agents
+share one versioned model of the learner and of the learner's context,
+fed by knowledge tracing and by the Context agent. Routing, grading,
+mastery, recommendations, triggers and the risk of each student are
+computed in code, and every decision carries its actual reasons. The
+language model writes answers grounded in the course, quiz items and
+drafts, all checked in code. The teacher reviews the questions, sets the
+objectives, steers the recommendations, decides what to do with each
+early warning and validates every change to the material. The platform
+runs from Moodle through LTI~1.3, without any change to its core.
+
+The evidence supports these choices within stated limits. On simulated
+learners, the full framework gave a higher normalized learning gain than
+the same agents without the context model and than a non-adaptive
+baseline, and the evaluation itself corrected a ranking rule. The
+Material Improvement detectors found the planted flaws of simulated
+classes with high precision, and the early warning predicted, weeks
+ahead, the learners who would end below the objectives far better than
+the rule flags of the dashboard.
+
+\section*{Limits}
+
+The main limit is that these results come from simulation: the
+simulator's assumptions decide them, and the value of the context model
+depends on how much prerequisites matter in a course. The thresholds,
+the style effect and the risk model were set or fitted on simulated
+learners and one demo course. Moodle's logs are not read, because
+Moodle~4.5 offers no web service for them and nothing is installed in
+Moodle. Arabic is not yet supported, and BKT has not been validated
+offline on a public dataset.
 
 \section*{Future work}
-\todonote{Administration agents (institutional analytics, early warning,
-programme quality), experiments with real learners, extension to other
-LMSs through LTI.}
+
+\begin{itemize}
+  \item \emph{Run the pilot} with a real class, as the runbook describes,
+        to measure the learning gain and the usability, and refit the
+        risk model and the BKT parameters on real data.
+  \item \emph{Arabic support} for the interface, the tutor and the
+        quizzes, and an evaluation per language.
+  \item \emph{Richer traces} through a Moodle log observer or the events
+        of a newer version, and the device and affective dimensions of
+        the context.
+  \item \emph{A verifier agent} that checks every answer before delivery,
+        and a measure of the hallucinations that cascade between agents.
+  \item \emph{Institutional agents} for programme-level analytics and
+        quality, built on the same shared state and the same early
+        warning, and the use of the LTI roster and deep-linking services
+        to reach other LMSs.
+\end{itemize}

@@ -1,35 +1,91 @@
 % =====================================================================
-%  General introduction (write it last, or nearly last)
+%  General introduction
 % =====================================================================
 \unnumberedchapter{General Introduction}
 \label{chap-intro}
 
 \section*{Context}
-\todonote{Digitalisation of teaching, widespread use of LMSs (including
-Moodle in Algerian universities), arrival of LLMs in education.}
+
+Universities now teach through digital platforms. Learning management
+systems (LMSs) organize courses, activities, grades and communication,
+and Moodle alone runs more than 160,000 registered sites in 242
+countries~\cite{moodle_stats}. In Algeria, the move to distance teaching
+in 2020 relied largely on Moodle, which has remained a common
+institutional platform since then~\cite{kerrouzi2023}. At the same time,
+large language models (LLMs) have entered education: they can explain a
+concept in several ways, write exercises and converse with a learner in
+natural language~\cite{wang2024llm4edu,kasneci2023}. Their effect on
+learning, however, depends on how they are used. A tutor designed with
+pedagogical principles helped students learn more in less
+time~\cite{kestin2025}, while an unconstrained chatbot made students
+perform worse once it was taken away~\cite{bastani2025}.
 
 \section*{Problem statement}
-\todonote{LMSs deliver the same path to every learner; their built-in AI
-tools answer one-off requests and model neither the learner nor the
-context. Central question: how can an LLM-based, context-aware multi-agent
-architecture personalize learning and help teachers improve their
-materials, while keeping humans in the loop?}
+
+LMSs give every learner the same path. Their adaptation tools rely on
+rules that the teacher writes by hand for each case, and the AI tools
+they now include answer isolated requests: they keep no model of what the
+learner knows, ignore the learner's situation in the course (deadlines,
+prerequisites, inactivity) and do not coordinate several functions
+(\cref{chap-lms}). Research systems that combine LLM agents with
+education rarely model this situation, are rarely integrated into a real
+LMS, leave the teacher aside and, with few exceptions, have not measured
+their effect on learning (\cref{chap-sota}). This thesis therefore asks:
+\emph{how can an LLM-based, context-aware multi-agent framework
+personalize learning inside an existing LMS, and help teachers improve
+their course, while keeping the decisions explainable and the teacher in
+control?}
 
 \section*{Objectives}
-\todonote{List 3 to 4 measurable objectives.}
+
+The work has four objectives:
+\begin{enumerate}
+  \item Build \emph{one explicit, shared model} of the learner and of the
+        learner's context (knowledge, activity, deadlines, prerequisites,
+        goals), maintained by knowledge tracing and read by every agent.
+  \item Design \emph{specialized agents} whose decisions are taken in
+        code and explained by their actual reasons, with the LLM limited
+        to writing text grounded in the course.
+  \item \emph{Integrate} the framework with Moodle without modifying its
+        core, and give the teacher control over the content, the
+        recommendations and the follow-up of students at risk.
+  \item \emph{Measure} the effect of the framework on learning, first in
+        simulation and then with a pilot that can be run with a real
+        class.
+\end{enumerate}
 
 \section*{Contributions}
-\todonote{Summarize the contributions (Chapter~3) and the implementation
-(Chapter~4).}
+
+The framework, implemented as a working platform, makes twelve
+contributions (\cref{chap-contribution}). A single, versioned learner
+state, shared by all agents through one component, holds the mastery of
+each section estimated by Bayesian knowledge tracing, the misconceptions,
+the learner's goal and an explicit context model maintained by a Context
+agent, which also triggers proactive interventions. Specialized agents
+coordinated by an explicit graph tutor from the course with checked
+citations, generate validated quizzes, recommend a goal-aware learning
+path with the reasons of each step, and choose an explanation format from
+the learner's feedback. The teacher reviews the generated questions, sets
+objectives, steers recommendations, receives an early warning that
+predicts which students may end below the objectives and why, and gets
+evidence-based proposals to improve the course material. The platform is
+launched from Moodle through LTI~1.3 and sends each learner's progress to
+the Moodle gradebook. A simulated ablation shows a higher learning gain
+for the full framework than for the same agents without the context
+model and than for a non-adaptive baseline, and a pilot kit (random arms,
+pre-test and post-test, consent, pseudonymized export, analysis) is
+ready for a real class.
 
 \section*{Thesis outline}
+
 This thesis is organized into four chapters. \Cref{chap-lms} presents
-learning management systems, their interoperability standards, the main
-existing platforms and their limits with respect to adaptive learning.
-\Cref{chap-sota} reviews the state of the art in artificial intelligence,
-large language models and multi-agent systems applied to education, then
-analyzes related work. \Cref{chap-contribution} describes the proposed
-multi-agent framework and its architecture. \Cref{chap-implementation}
-details the design and implementation, including the integration with
-Moodle. A general conclusion summarizes the results and outlines future
-work.
+online learning, learning management systems, their interoperability
+standards and the main platforms, studies Moodle in detail and analyzes
+the limits of LMSs for adaptive learning. \Cref{chap-sota} reviews
+adaptive and context-aware learning, large language models and
+multi-agent systems in education, analyzes the related work and
+identifies eight gaps. \Cref{chap-contribution} presents the
+contributions that address these gaps, with the evidence collected for
+each and their limits. \Cref{chap-implementation} presents the design of
+the platform and its development. A general conclusion summarizes the
+results and outlines future work.
