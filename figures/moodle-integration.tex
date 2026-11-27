@@ -31,7 +31,7 @@
   % ---------------------------------------------------------------- flows
   \draw[call] (WS.east |- api) -- node[slbl, above=2pt] {GET (read-only)} (api.west);
   \draw[call] (moodle.east |- WS) -- (WS.west);
-  \draw[call] (api) -- node[slbl] {sanitised HTML,\\signed URLs} (reader);
+  \draw[call] (api) -- node[slbl] {sanitized HTML,\\signed URLs} (reader);
   \draw[call] (student-c) ++(0,0.55) -- (reader.south);
   \draw[rw] (reader.west) -- node[slbl, pos=0.45] {in-app views\\recorded} (db.east |- reader.west);
   % forbidden write-back
