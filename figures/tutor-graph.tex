@@ -2,57 +2,52 @@
 \input{pfe-style}
 \begin{document}
 \begin{tikzpicture}[
-  nd/.style={agent, font=\scriptsize, minimum width=27mm, minimum height=9mm, align=center},
+  nd/.style={font=\scriptsize, minimum width=30mm, minimum height=10mm, align=center},
+  code/.style={api, nd},
+  llm/.style={ai, nd},
   term/.style={circle, draw=pInk, fill=pInk, text=white, font=\tiny\bfseries, minimum size=9mm, inner sep=0pt},
-  ctag/.style={tag=pApi},
-  ltag/.style={tag=pAi},
-  elbl/.style={font=\scriptsize, fill=white, inner sep=1.2pt, align=center}]
+  elbl/.style={font=\scriptsize, fill=white, inner sep=1.5pt, align=center}]
+  % ---------------------------------------------------------------- nodes
   \node[term] (start) at (0,0) {START};
-  \node[nd, minimum width=36mm] (cls) at (0,-1.6) {\texttt{classify}\\intent, language, topic};
-  \node[nd] (sm)  at (-3.7,-3.3) {\texttt{smalltalk}\\short reply};
-  \node[nd] (ret) at (0,-3.3) {\texttt{retrieve}\\hybrid search, top 6};
-  \node[decision, minimum width=24mm] (gate) at (0,-5.3) {gate};
-  \node[nd] (sq)  at (-3.7,-7.3) {\texttt{suggest\_quiz}\\propose a quiz};
-  \node[nd] (ad)  at (0,-7.3) {\texttt{adapt}\\mastery $\to$ level,\\context hint};
-  \node[nd] (gen) at (0,-9.2) {\texttt{generate}\\cited answer or hints};
-  \node[nd] (nf)  at (3.7,-7.3) {\texttt{not\_found}\\closest sections};
-  \node[term] (end) at (0,-11.0) {END};
-  % tags: code vs LLM
-  \node[ctag, anchor=south east] at ([xshift=-1mm]cls.north east) {rules first};
-  \node[ltag, anchor=south west] at ([xshift=1mm]cls.north west) {LLM fallback};
-  \node[ctag, anchor=south east] at (ret.north east) {code};
-  \node[ctag, anchor=south east] at (gate.north east) [xshift=3mm] {code};
-  \node[ctag, anchor=south east] at (ad.north east) {code};
-  \node[ltag, anchor=south east] at (gen.north east) {LLM};
-  \node[ctag, anchor=south east] at (nf.north east) {code};
-  \node[ctag, anchor=south east] at (sq.north east) {code};
-  \node[ltag, anchor=south east] at (sm.north east) {LLM};
-  % edges
+  \node[code, minimum width=40mm] (cls) at (0,-1.6)
+    {\texttt{classify}\\intent, language, topic\\[1pt]{\tiny\color{pMuted}rules first, LLM fallback}};
+  \node[llm] (sm)  at (-4.0,-3.5) {\texttt{smalltalk}\\short reply};
+  \node[code] (ret) at (0,-3.5) {\texttt{retrieve}\\hybrid search, top 6};
+  \node[decision, draw=pApi, fill=pApiL, minimum width=22mm] (gate) at (0,-5.5) {gate};
+  \node[code] (sq)  at (-4.0,-7.5) {\texttt{suggest\_quiz}\\propose a quiz};
+  \node[code] (ad)  at (0,-7.5) {\texttt{adapt}\\mastery $\to$ level,\\context hint};
+  \node[code] (nf)  at (4.0,-7.5) {\texttt{not\_found}\\closest sections};
+  \node[llm] (gen) at (0,-9.5) {\texttt{generate}\\cited answer or hints};
+  \node[term] (end) at (0,-11.4) {END};
+  % ---------------------------------------------------------------- edges
   \draw[call] (start) -- (cls);
   \draw[call] (cls) -- node[elbl] {otherwise} (ret);
-  \draw[call] (cls.west) -| node[elbl, pos=0.25] {smalltalk} (sm.north);
+  \draw[call] (cls.west) -| node[elbl, pos=0.3] {smalltalk} (sm.north);
   \draw[call] (ret) -- (gate);
   \draw[call] (gate.west) -| node[elbl, pos=0.3] {quiz intent} (sq.north);
-  \draw[call] (gate) -- node[elbl] {best similarity\\$\geq$ 0.42} (ad);
-  \draw[call] (gate.east) -| node[elbl, pos=0.3] {below\\threshold} (nf.north);
+  \draw[call] (gate) -- node[elbl] {best similarity $\geq$ 0.42} (ad);
+  \draw[call] (gate.east) -| node[elbl, pos=0.3] {below threshold} (nf.north);
   \draw[call] (ad) -- (gen);
   \draw[call] (gen) -- (end);
-  \draw[call] (sq.south) |- ([yshift=-1mm]end.west);
+  \draw[call] (sm.west) -- ++(-0.45,0) |- ([yshift=2mm]end.west);
+  \draw[call] (sq.south) |- ([yshift=-2mm]end.west);
   \draw[call] (nf.south) |- (end.east);
-  \draw[call] (sm.west) -- ++(-0.4,0) |- ([yshift=2.5mm]end.west);
-  % side panel: streamed steps
-  \node[note, anchor=north west, text width=44mm, font=\scriptsize, text=pInk] (panel) at (5.9,-0.6)
-   {\textbf{Agent steps streamed to the chat} (SSE \texttt{step} events)\\[2mm]
+  % ---------------------------------------------------------------- side panel
+  \node[note, anchor=north west, text width=48mm, font=\scriptsize, text=pInk] (panel) at (6.6,-0.9)
+   {\textbf{Agent steps streamed to the chat}\\(SSE \texttt{step} events)\\[2mm]
     Each node emits \emph{running}, then \emph{done} with its details and duration.
-    Example (ADR-0008):\\[1.5mm]
-    \texttt{classify} \quad concept, rule, 7\,ms\\
-    \texttt{retrieve} \quad 6 passages, best 0.62, 3.4\,s\\
-    \texttt{adapt} \quad mastery 20\,\%, step by step,\\ \hspace*{9mm}deadline in 2 days\\
-    \texttt{generate} \quad cited, 1.2\,s\\[2mm]
+    Example (\mbox{ADR-0008}):\\[1.5mm]
+    \begin{tabular}{@{}ll@{}}
+      \texttt{classify} & concept, rule, 7\,ms\\
+      \texttt{retrieve} & 6 passages, best 0.62, 3.4\,s\\
+      \texttt{adapt}    & mastery 20\,\%, step by step,\\
+                        & deadline in 2 days\\
+      \texttt{generate} & cited, 1.2\,s
+    \end{tabular}\\[2mm]
     The steps come from the graph's own spans (\texttt{agent\_event}), never from the
     model's chain of thought. They are stored with the answer (\texttt{message.steps}).};
-  \node[note, anchor=north west, font=\scriptsize, text=pInk] at ([yshift=-3mm]panel.south west)
-   {\tikz[baseline=-0.5ex]\node[tag=pApi]{code}; decision taken in code\\[1mm]
-    \tikz[baseline=-0.5ex]\node[tag=pAi]{LLM}; text written by the LLM};
+  \node[note, anchor=north west, font=\scriptsize, text=pInk, text width=48mm] at ([yshift=-4mm]panel.south west)
+   {\tikz[baseline=(b.base)]\node[api, minimum width=7mm, minimum height=3.5mm, inner ysep=1pt, font=\scriptsize] (b) {\strut};\ \ decision taken in code\\[1.5mm]
+    \tikz[baseline=(b.base)]\node[ai, minimum width=7mm, minimum height=3.5mm, inner ysep=1pt, font=\scriptsize] (b) {\strut};\ \ text written by the LLM};
 \end{tikzpicture}
 \end{document}

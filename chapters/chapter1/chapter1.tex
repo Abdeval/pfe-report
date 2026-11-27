@@ -67,16 +67,16 @@ integrate generative artificial intelligence.
 \centering
 \adjustbox{max width=\textwidth}{%
 \begin{tikzpicture}[
-  gen/.style={bloc,text width=2.35cm,minimum height=2.1cm,font=\footnotesize},
-  genai/.style={blocstrong,text width=2.35cm,minimum height=2.1cm,font=\footnotesize\bfseries},
+  gen/.style={bloc,text width=2.35cm,minimum height=2.6cm,font=\footnotesize},
+  genai/.style={gen,fill=thprimary,text=white},
   node distance=0.35cm]
-  \node[gen]   (g1) {\textbf{Corres\-pondence}\\[2pt]print, postal mail};
-  \node[gen,right=of g1]   (g2) {\textbf{Multimedia}\\[2pt]radio, television, cassettes};
-  \node[gen,right=of g2]   (g3) {\textbf{Tele-learning}\\[2pt]video and audio conferencing};
-  \node[gen,right=of g3]   (g4) {\textbf{Online learning}\\[2pt]web, LMS, forums};
-  \node[gen,right=of g4]   (g5) {\textbf{Open platforms}\\[2pt]MOOCs, mobile, analytics};
-  \node[genai,right=of g5] (g6) {\textbf{AI-augmented platforms}\\[2pt]LLMs, agents, adaptation};
-  \draw[arrow] ([yshift=-1.5cm]g1.west) -- ([yshift=-1.5cm]g6.east)
+  \node[gen]               (g1) {\textbf{Corres\-pondence}\\[3pt]print,\\postal mail};
+  \node[gen,right=of g1]   (g2) {\textbf{Multimedia}\\[3pt]radio, television,\\cassettes};
+  \node[gen,right=of g2]   (g3) {\textbf{Tele-learning}\\[3pt]video and audio\\conferencing};
+  \node[gen,right=of g3]   (g4) {\textbf{Online learning}\\[3pt]web, LMS,\\forums};
+  \node[gen,right=of g4]   (g5) {\textbf{Open platforms}\\[3pt]MOOCs, mobile,\\analytics};
+  \node[genai,right=of g5] (g6) {\textbf{AI-augmented}\\\textbf{platforms}\\[3pt]LLMs, agents,\\adaptation};
+  \draw[arrow] ([yshift=-0.35cm]g1.south west) -- ([yshift=-0.35cm]g6.south east)
      node[pos=0,below right,font=\footnotesize,text=thgray]{more interaction, finer monitoring}
      node[pos=1,below left,font=\footnotesize,text=thgray]{time};
 \end{tikzpicture}}
@@ -242,8 +242,9 @@ and to external tools. Our framework will use this integration layer.
   \node[layer,fit=(u)(c)(s),
         label={[font=\footnotesize\bfseries,text=thaccent]left:Application}] (cA) {};
   % Integration (right)
-  \node[blocstrong,text width=2.8cm,minimum height=3.2cm,right=1.1cm of s,
-        yshift=0.9cm] (int) {Web services\\REST API\\LTI, xAPI,\\SCORM, QTI};
+  \path (s.east) -- (s.east |- ext.east) coordinate[pos=0.5] (mid);
+  \node[blocstrong,text width=2.8cm,minimum height=4.0cm,anchor=west]
+        (int) at ([xshift=1.1cm]mid) {Integration layer\\[4pt]\mdseries web services\\REST API\\LTI, xAPI,\\SCORM, QTI};
   % Data
   \node[b,below=1.3cm of u] (db) {Relational database};
   \node[b,right=of db] (fs) {File storage};
@@ -253,7 +254,7 @@ and to external tools. Our framework will use this integration layer.
   \draw[arrow,<->] (cP.south) -- (cA.north);
   \draw[arrow,<->] (cA.south) -- (cD.north);
   \draw[arrow,<->] (cA.east) -- (int.west |- cA.east);
-  \draw[arrow,<->] (ext.east) -| (int.north);
+  \draw[arrow,<->] (cP.east) -- (int.west |- cP.east);
 \end{tikzpicture}}
 \caption{Layered architecture of an LMS}
 \label{fig-lms-architecture}
@@ -533,7 +534,7 @@ request.
 
 Moodle offers four mechanisms for exchanging data with an external service
 without modifying its core. They are summarized in
-\cref{fig-moodle-integration}.
+\cref{fig-moodle-integration-points}.
 
 \begin{itemize}
   \item \textbf{Web services.} Moodle exposes several hundred functions
@@ -576,7 +577,7 @@ without modifying its core. They are summarized in
   }
 \end{tikzpicture}}
 \caption{Moodle's integration points with an external service}
-\label{fig-moodle-integration}
+\label{fig-moodle-integration-points}
 \end{figure}
 
 \subsection{Adaptation tools available in Moodle}
@@ -627,21 +628,25 @@ illustrated in \cref{fig-moodle-ai}:
 \begin{figure}[htbp]
 \centering
 \adjustbox{max width=\textwidth}{%
-\begin{tikzpicture}[node distance=0.35cm and 1.3cm,
-  b/.style={bloc,text width=3cm,minimum height=0.8cm}]
-  \node[b] (p1) {Text editor};
-  \node[b,below=of p1] (p2) {Course assistance};
-  \node[layer,fit=(p1)(p2),label={[font=\footnotesize\bfseries,text=thaccent]above:Placements}] (P) {};
-  \node[b,right=of p1,yshift=0.6cm] (a1) {Generate text};
-  \node[b,below=of a1] (a2) {Generate an image};
-  \node[b,below=of a2] (a3) {Summarize, explain};
-  \node[layer,fit=(a1)(a3),label={[font=\footnotesize\bfseries,text=thaccent]above:Actions}] (A) {};
-  \node[b,right=of a1] (f1) {OpenAI};
-  \node[b,below=of f1] (f2) {Azure AI};
-  \node[b,below=of f2] (f3) {Ollama, others};
-  \node[layer,fit=(f1)(f3),label={[font=\footnotesize\bfseries,text=thaccent]above:Providers}] (F) {};
-  \draw[arrow] (P.east) -- (A.west |- P.east);
-  \draw[arrow] (A.east) -- (F.west);
+\begin{tikzpicture}[
+  b/.style={bloc,text width=3.4cm,minimum height=0.8cm},
+  ttl/.style={font=\footnotesize\bfseries,text=thaccent}]
+  % three groups, centred on the same horizontal axis (y = 0)
+  \node[b] (p1) at (0, 0.55) {Text editor};
+  \node[b] (p2) at (0,-0.55) {Course assistance};
+  \node[b] (a1) at (5.0, 1.1) {Generate text};
+  \node[b] (a2) at (5.0, 0.0) {Generate an image};
+  \node[b] (a3) at (5.0,-1.1) {Summarize, explain};
+  \node[b] (f1) at (10.0, 1.1) {OpenAI};
+  \node[b] (f2) at (10.0, 0.0) {Azure AI};
+  \node[b] (f3) at (10.0,-1.1) {Ollama, others};
+  \node[layer,fit=(p1)(p2)] (P) {};
+  \node[layer,fit=(a1)(a3)] (A) {};
+  \node[layer,fit=(f1)(f3)] (F) {};
+  \foreach \g/\t in {P/Placements,A/Actions,F/Providers}
+    \node[ttl,above=2pt] at (\g.north |- A.north) {\t};
+  \draw[arrow] (P.east |- 0,0) -- (A.west |- 0,0);
+  \draw[arrow] (A.east |- 0,0) -- (F.west |- 0,0);
   \node[below=0.5cm of A,font=\footnotesize,text=thgray,text width=11cm,align=center]
     {Configured by the administrator: activation, usage limits, system
      instructions; requests are logged};

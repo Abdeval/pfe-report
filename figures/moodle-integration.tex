@@ -20,16 +20,16 @@
     \node[layer={pLms}{Web services used (REST, token)}, fit=(w1)(w6), inner ysep=13pt] (WS) {};
   \end{scope}
   % ---------------------------------------------------------------- API
-  \node[api, minimum width=32mm, minimum height=26mm, align=center, very thick] (api) at (12.6, 0.4)
+  \node[api, minimum width=32mm, minimum height=26mm, align=center, very thick] (api) at (13.8, 0.4)
     {\textbf{API gateway (NestJS)}\\[1mm]\scriptsize the only Moodle client\\\scriptsize holds the single token\\
      \scriptsize sanitises page HTML\\\scriptsize signs file links (HMAC, 1\,h)};
-  \node[web, minimum width=32mm, align=center] (reader) at (12.6,-3.1)
+  \node[web, minimum width=32mm, align=center] (reader) at (13.8,-3.1)
     {\textbf{In-app reader}\\\scriptsize pages, PDFs, images};
-  \actor{student}{12.6,-5.6}{Student}
-  \node[store, minimum width=30mm, font=\scriptsize] (db) at (6.4,-3.4)
+  \actor{student}{13.8,-5.6}{Student}
+  \node[store, minimum width=30mm, font=\scriptsize] (db) at (7.0,-3.4)
     {\textbf{activity\_view}\\views, reading seconds\\\texttt{enrolment.last\_access\_at}};
   % ---------------------------------------------------------------- flows
-  \draw[call] (WS.east |- api) -- node[slbl] {GET (read-only)} (api.west);
+  \draw[call] (WS.east |- api) -- node[slbl, above=2pt] {GET (read-only)} (api.west);
   \draw[call] (moodle.east |- WS) -- (WS.west);
   \draw[call] (api) -- node[slbl] {sanitised HTML,\\signed URLs} (reader);
   \draw[call] (student-c) ++(0,0.55) -- (reader.south);

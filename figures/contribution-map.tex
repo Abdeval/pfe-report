@@ -7,10 +7,12 @@
   con/.style={comp, font=\scriptsize, minimum width=58mm, text width=55mm, align=left, minimum height=7.5mm},
   impl/.style={con, draw=pOk, fill=pOkL},
   part/.style={con, draw=pWarn, fill=pWarnL},
-  fut/.style={con, draw=pMuted, fill=white, dashed},
-  ln/.style={draw=pMuted, thick, -{Stealth[length=1.8mm]}}]
+  fut/.style={con, draw=pMuted, fill=white, dashed}]
+  % one colour per gap, so that each link can be followed
+  \colorlet{k1}{pWeb}\colorlet{k2}{pAgent}\colorlet{k3}{pApi}\colorlet{k4}{pLms}
+  \colorlet{k5}{pMuted}\colorlet{k6}{pAi}\colorlet{k7}{pOk}\colorlet{k8}{pWarn}
   % gaps
-  \foreach \i/\t [count=\k] in {
+  \foreach \i/\t in {
     1/{G1 no explicit context model},
     2/{G2 agents cut off from knowledge tracing},
     3/{G3 one adaptation dimension at a time},
@@ -18,30 +20,33 @@
     5/{G5 no evidence of learning effect},
     6/{G6 weak teacher control},
     7/{G7 grounding and reliability},
-    8/{G8 language, privacy, local context}}
-    \node[gap] (g\i) at (0, -\k*1.15) {\t};
+    8/{G8 language, privacy, local context}} {
+    \node[gap] (g\i) at (0, -\i*1.25) {\t};
+    \fill[k\i] (g\i.east) circle (1.3pt);
+  }
   % contributions
-  \node[impl] (c1) at (9.3,-0.55)  {C1 shared, versioned learner + context model};
-  \node[impl] (c2) at (9.3,-1.45)  {C2 Context agent};
-  \node[impl] (c3) at (9.3,-2.35)  {C3 knowledge tracing (BKT)};
-  \node[impl] (c4) at (9.3,-3.25)  {C4 specialised agents on one graph};
-  \node[impl] (c5) at (9.3,-4.15)  {C5 proactive triggers};
-  \node[impl] (c6) at (9.3,-5.05)  {C6 code decides, the LLM writes; the ``why''};
-  \node[impl] (c7) at (9.3,-5.95)  {C7 teacher in the loop};
-  \node[impl] (c8) at (9.3,-6.85)  {C8 grounding and guardrails};
-  \node[part] (c9) at (9.3,-7.75)  {C9 multilingual (FR/EN; Arabic later)};
-  \node[part] (c10) at (9.3,-8.65) {C10 Moodle integration (LTI 1.3 later)};
-  \node[impl, very thick] (cm) at (9.3,-9.55) {Material Improvement agent};
-  \node[fut] (ce) at (9.3,-10.45) {Learning-gain evaluation};
-  % edges (gap -> contribution)
+  \node[impl] (c1) at (10.5,-0.55)  {C1 shared, versioned learner + context model};
+  \node[impl] (c2) at (10.5,-1.45)  {C2 Context agent};
+  \node[impl] (c3) at (10.5,-2.35)  {C3 knowledge tracing (BKT)};
+  \node[impl] (c4) at (10.5,-3.25)  {C4 specialised agents on one graph};
+  \node[impl] (c5) at (10.5,-4.15)  {C5 proactive triggers};
+  \node[impl] (c6) at (10.5,-5.05)  {C6 code decides, the LLM writes; the ``why''};
+  \node[impl] (c7) at (10.5,-5.95)  {C7 teacher in the loop};
+  \node[impl] (c8) at (10.5,-6.85)  {C8 grounding and guardrails};
+  \node[part] (c9) at (10.5,-7.75)  {C9 multilingual (FR/EN; Arabic later)};
+  \node[part] (c10) at (10.5,-8.65) {C10 Moodle integration (LTI 1.3 later)};
+  \node[impl, very thick] (cm) at (10.5,-9.55) {Material Improvement agent};
+  \node[fut] (ce) at (10.5,-10.45) {Learning-gain evaluation};
+  % edges (gap -> contribution): smooth curves coloured by gap
   \foreach \g/\c in {1/c1,2/c1,1/c2,4/c2,2/c3,3/c4,4/c5,6/c6,7/c6,6/c7,7/c8,8/c8,8/c9,3/c10,6/cm,7/cm,5/ce}
-    \draw[ln] (g\g.east) -- (\c.west);
+    \draw[k\g, thick, -{Stealth[length=1.8mm]}, opacity=0.9]
+      (g\g.east) .. controls +(2.2,0) and +(-2.2,0) .. (\c.west);
   % headers and legend
-  \node[font=\footnotesize\bfseries, text=pLms] at (0,-0.25) {Gaps in the literature};
-  \node[font=\footnotesize\bfseries, text=pInk] at (9.3, 0.25) {Contributions of this work};
-  \node[note, anchor=north west, text=pInk] at (-2.4,-10.0)
-    {\tikz\node[impl, minimum width=6mm, text width=4mm, minimum height=3mm]{};\ implemented \quad
-     \tikz\node[part, minimum width=6mm, text width=4mm, minimum height=3mm]{};\ partial \quad
-     \tikz\node[fut, minimum width=6mm, text width=4mm, minimum height=3mm]{};\ future work};
+  \node[font=\footnotesize\bfseries, text=pLms] at (0,-0.35) {Gaps in the literature};
+  \node[font=\footnotesize\bfseries, text=pInk] at (10.5, 0.25) {Contributions of this work};
+  \node[note, anchor=north west, text=pInk] at (-2.8,-10.8)
+    {\tikz[baseline=(b.base)]\node[impl, minimum width=6mm, text width=4mm, minimum height=3mm, inner ysep=1pt] (b) {\strut};\ implemented \quad
+     \tikz[baseline=(b.base)]\node[part, minimum width=6mm, text width=4mm, minimum height=3mm, inner ysep=1pt] (b) {\strut};\ partial \quad
+     \tikz[baseline=(b.base)]\node[fut, minimum width=6mm, text width=4mm, minimum height=3mm, inner ysep=1pt] (b) {\strut};\ future work};
 \end{tikzpicture}
 \end{document}
