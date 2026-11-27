@@ -1,28 +1,34 @@
 % =====================================================================
 %  Chapter 4, Part 1: Conception
-%  Sources: docs/adr/0001-0008, docs/report/cowork-script.md section 7.
+%  Sources: docs/adr/0001-0012 of the code repository.
 % =====================================================================
 
 % =====================================================================
 \section*{Introduction}
-\label{sec-d-intro}
+\addcontentsline{toc}{section}{Introduction}
+\phantomsection\label{sec-d-intro}
 % =====================================================================
 
-This chapter presents the design of the framework whose contributions
-were described in \cref{chap-contribution}. The framework was built in
-short iterative sprints. Each sprint delivered a working part of the
-system (the grounded tutor, the adaptive loop, the context model, the
-teacher pages, the in-app reader, the Material Improvement agent), and
+This chapter presents the design and the development of the framework
+whose contributions were described in \cref{chap-contribution}. The
+framework was built in thirteen short iterative sprints. Each sprint
+delivered a working part of the system (the grounded tutor, the adaptive
+loop, the context model, the teacher pages, the in-app reader, the
+Material Improvement agent, the learning-gain evaluation, explainable
+personalization, the LTI launch and the pilot kit, the early warning), and
 each major decision was recorded in an \emph{architecture decision record}
 (ADR): a short document that states the context, the decision, the
-alternatives and the consequences~\cite{nygard2011adr}. Eight ADRs were
+alternatives and the consequences~\cite{nygard2011adr}. Twelve ADRs were
 written; they are the source of the design choices presented here.
 
-The chapter first analyses the requirements (\cref{sec-d-req}). It then
-presents the architecture (\cref{sec-d-arch}), the dynamic view of the
-main scenarios (\cref{sec-d-dynamic}), the static view of the domain
+The first part of the chapter covers the design. It analyses the
+requirements (\cref{sec-d-req}), then presents the architecture
+(\cref{sec-d-arch}), the dynamic view of the main scenarios
+(\cref{sec-d-dynamic}), the static view of the domain
 (\cref{sec-d-static}), the design of the database (\cref{sec-d-db}) and
-the technology stack (\cref{sec-d-stack}).
+the technology stack (\cref{sec-d-stack}). The second part covers the
+development: the process, the code base, the interfaces, the tests and
+the deployment.
 
 % =====================================================================
 \section{Requirements analysis}
@@ -44,11 +50,11 @@ systems that the platform depends on.
 \toprule
 \textbf{Actor} & \textbf{Type} & \textbf{Role} \\
 \midrule
-Student & primary & reads the course, asks the tutor, takes quizzes, follows the suggestions \\
-Teacher & primary & indexes the course, reviews generated questions, sets objectives, monitors the class, improves the material \\
-Moodle & secondary & provides courses, activities, files, enrolments, completion and grades (read-only) \\
+Student & primary & reads the course, asks the tutor, takes quizzes, sets a goal, follows the path and the suggestions, takes part in a study \\
+Teacher & primary & indexes the course, reviews generated questions, sets objectives, steers recommendations, monitors the class, acts on early warnings, improves the material, runs a study \\
+Moodle & secondary & provides courses, activities, files, enrolments, completion and grades; launches the app (LTI 1.3) and receives the progress grade (AGS) \\
 LLM provider & secondary & computes embeddings and writes answers, quiz items and material drafts (hosted or local) \\
-Scheduler & secondary & starts the periodic context sync (BullMQ repeatable job) \\
+Scheduler & secondary & starts the periodic context sync, after which every student's risk is scored (BullMQ repeatable job) \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -68,7 +74,7 @@ FR-S for the student, FR-T for the teacher and FR-Y for the system.
 \textbf{Id} & \textbf{Requirement} \\
 \midrule
 \multicolumn{2}{@{}l}{\textit{Student}} \\
-FR-S1 & Sign in. \\
+FR-S1 & Sign in from Moodle (LTI 1.3 launch), without a second login. \\
 FR-S2 & See my courses and my progress. \\
 FR-S3 & Read the course activities inside the app (pages, PDFs) without a second login. \\
 FR-S4 & Ask the tutor and see its steps and its sources. \\
@@ -76,6 +82,10 @@ FR-S5 & Get hints, not solutions, for exercises. \\
 FR-S6 & Take adaptive quizzes with immediate feedback. \\
 FR-S7 & See my mastery per section, my deadlines and my misconceptions. \\
 FR-S8 & Receive proactive suggestions with their reason, and dismiss them. \\
+FR-S9 & Set my goal, my level and my preferred explanation style for a course. \\
+FR-S10 & See my learning path and why each section is recommended. \\
+FR-S11 & Rate the tutor's answers. \\
+FR-S12 & Take part in a study: consent or decline, take the pre-test, the post-test and the SUS questionnaire, withdraw. \\
 \midrule
 \multicolumn{2}{@{}l}{\textit{Teacher}} \\
 FR-T1 & Index the course material. \\
@@ -84,11 +94,16 @@ FR-T3 & Choose the review mode of the course. \\
 FR-T4 & Set the target mastery and the key sections. \\
 FR-T5 & Monitor the class: mastery heatmap, risk flags, shared misconceptions. \\
 FR-T6 & Run the material analysis; accept, edit, reject or mark as applied each suggestion. \\
+FR-T7 & Pin or skip a section for one student or for the whole class. \\
+FR-T8 & See the early warnings with their reasons; send a nudge, mark a warning handled or dismiss it; see whether the student came back. \\
+FR-T9 & Run a study: assign the arms, build the pre-test and post-test, export the pseudonymized results and the pseudonym key. \\
 \midrule
 \multicolumn{2}{@{}l}{\textit{System}} \\
 FR-Y1 & Sync the context periodically. \\
 FR-Y2 & Record in-app reading. \\
 FR-Y3 & Trace every agent decision. \\
+FR-Y4 & Score the risk of every student after each sync and keep a daily snapshot. \\
+FR-Y5 & Send each student's course progress to the Moodle gradebook. \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -100,11 +115,12 @@ the context of an Algerian university.
 
 \begin{description}[leftmargin=1.5cm, labelwidth=1.3cm, labelsep=0.2cm, style=sameline, font=\normalfont\bfseries]
   \item[NFR-1] \textbf{Moodle core untouched.} The integration uses only
-        web services; no plugin is required and nothing is written to
-        Moodle.
+        web services and LTI~1.3; no plugin is required, and the only
+        write is the progress grade, through LTI's grade service.
   \item[NFR-2] \textbf{Privacy.} A single Moodle token, held by one
         service; signed, short-lived file links; an option to run the
-        language model locally.
+        language model locally; consent, withdrawal and pseudonymized
+        exports in a study.
   \item[NFR-3] \textbf{Traceability.} Every routing decision and agent
         step is logged with a trace identifier.
   \item[NFR-4] \textbf{Grounding.} Answers come only from the course
@@ -117,6 +133,9 @@ the context of an Algerian university.
   \item[NFR-7] \textbf{Bilingual interface} (French and English).
   \item[NFR-8] \textbf{Deployability.} The whole stack starts with Docker
         Compose.
+  \item[NFR-9] \textbf{Explainability.} Every recommendation and every
+        warning carries the structured reasons of the rule or model that
+        produced it; no explanation is written by an LLM.
 \end{description}
 
 \subsection{Use cases}
@@ -133,7 +152,7 @@ the update of the mastery. The Scheduler starts the context sync.
   \label{fig-use-cases}
 \end{figure}
 
-\Crefrange{tab-uc-tutor}{tab-uc-material} describe the four main use
+\Crefrange{tab-uc-tutor}{tab-uc-warning} describe the five main use
 cases.
 
 \newcommand{\ucrow}[2]{\textbf{#1} & #2 \\}
@@ -231,6 +250,28 @@ cases.
 \end{tabularx}
 \end{table}
 
+\begin{table}[htbp]
+\centering
+\caption{Use case \emph{Act on an early warning}}
+\label{tab-uc-warning}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}Y@{}}
+\toprule
+\ucrow{Actors}{Teacher (primary); Scheduler (secondary)}
+\ucrow{Pre-conditions}{A context sync has scored the students of the course; the teacher teaches the course.}
+\ucrow{Main scenario}{1. The teacher opens the class page.
+  2. The system lists the students with a medium or high risk, with the top three reasons and the trend over 7 days.
+  3. The teacher opens a warning and reads the pre-written nudge, built from the top reason.
+  4. The teacher edits the message and sends it.
+  5. The nudge appears in the student's feed with one action (a quiz on the weakest key section, or the overdue activity).
+  6. Within 7 days, the page shows whether the student came back (an answer, a reading or a tutor question).}
+\ucrow{Alternatives}{3a. The teacher marks the warning handled or dismisses it: it is hidden for 14 days, unless its level rises.
+  2a. The student is in the baseline arm of a running study: they are never listed.}
+\ucrow{Post-conditions}{The follow-up is stored with the score and the reasons it acted on; nothing is sent without the teacher.}
+\bottomrule
+\end{tabularx}
+\end{table}
+
 % =====================================================================
 \section{Architecture}
 \label{sec-d-arch}
@@ -308,12 +349,12 @@ recorded by the tracer in \texttt{agent\_event}.
 \textbf{Agent} & \textbf{Inputs} & \textbf{Outputs} \\
 \midrule
 Orchestrator & message, language & intent (concept, exercise, quiz, course\_info, smalltalk, off\_topic) and route \\
-Tutor & question, passages, mastery, context & grounded answer with numbered citations, or refusal \\
+Tutor & question, passages, mastery, context, style posterior & grounded answer with numbered citations, or refusal; chosen explanation style \\
 Assessment & section, learner language, question bank & quiz of 5 items (bank first) \\
 Diagnosis & each graded answer & updated mastery $P(L)$, misconceptions \\
-Recommendation & mastery, context, objectives & ranked sections, each with a reason \\
+Recommendation & mastery, context, objectives, learner goal, teacher overrides & ranked sections with structured reasons; learning path \\
 Context & Moodle sources, in-app views & course and learner context, interventions \\
-Learning Analytics & all learner states of the course & per-section and per-student view, risk flags \\
+Learning Analytics & all learner states of the course, recent activity & per-section and per-student view, risk flags; risk score, level and reasons, daily snapshot \\
 Material Improvement & answers, unanswered turns, reading, mastery, views & suggestions with evidence and drafts \\
 Ingestion (worker) & Moodle contents and files & chunks and embeddings \\
 \bottomrule
@@ -322,7 +363,7 @@ Ingestion (worker) & Moodle contents and files & chunks and embeddings \\
 
 \subsection{Main design decisions}
 
-\Cref{tab-adr} summarizes the eight architecture decision records, with
+\Cref{tab-adr} summarizes the twelve architecture decision records, with
 the alternatives considered and the reason for each choice.
 
 \begin{table}[htbp]
@@ -342,6 +383,10 @@ the alternatives considered and the reason for each choice.
 0006 & In-app course reader; signed file links (HMAC, 1\,h); in-app views recorded, never written to Moodle & links to Moodle; writing completion back & one interface, no double login; Moodle stays read-only \\
 0007 & Material Improvement: code detects (statistics), the LLM drafts, the teacher validates; on demand & LLM-only critique; scheduled runs & explainable, measurable, quota-friendly \\
 0008 & Agent steps in the chat from the graph's own spans, never model reasoning; course-centred interface & showing the LLM's chain of thought & transparency without leaking solutions \\
+0009 & Learning-gain evaluation: simulated ablation (full, without context, baseline) and a two-arm pilot kit; prerequisites of a close-deadline section first & a pilot only; deadline before prerequisite & an evaluation now, and a ranking rule it showed to be better \\
+0010 & Learner goal, goal-aware path, structured reasons, explanation-style bandit, teacher pin and skip & LLM-written explanations; full RL agent; learning-styles questionnaire & real reasons; learns from a few ratings; weak evidence for learning styles \\
+0011 & LTI 1.3 launch; progress grades through AGS; consent, pseudonyms and analysis for the pilot & dev login; grade web services; reading Moodle logs & no second login, no new capability, core untouched \\
+0012 & Logistic risk model fitted on simulated classes, with reasons; the teacher decides each follow-up & hand-weighted score; gradient boosting with SHAP; automatic nudges & honest reasons, an evaluated warning, teacher in control \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -352,9 +397,10 @@ the alternatives considered and the reason for each choice.
 % =====================================================================
 
 This section describes the behaviour of the system in its four main
-scenarios with sequence diagrams, then the ingestion of a course with an
-activity diagram, and the life cycle of three objects with state
-machines.
+scenarios with sequence diagrams, then two scenarios added in the later
+sprints (the launch from Moodle and the early warning), the ingestion of
+a course with an activity diagram, and the life cycle of three objects
+with state machines.
 
 \subsection{A tutor turn}
 
@@ -411,8 +457,10 @@ course; the API reads them from Moodle and adds the in-app views. The
 Context agent builds and commits the course context, then, for each
 enrolled learner, builds the learner context, commits it with a version
 check, evaluates the four triggers and inserts the new interventions,
-using their de-duplication key. Later, the student's feed shows each
-suggestion with its reason.
+using their de-duplication key. Finally, the Learning Analytics agent
+scores the risk of every student of the course and upserts the
+snapshot of the day (\cref{sec-c12}). Later, the student's feed shows
+each suggestion with its reason.
 
 \begin{figure}[htbp]
   \centering
@@ -440,6 +488,36 @@ changing the material in Moodle; each change is traced.
   \caption{Sequence of a material analysis.}
   \label{fig-seq-material}
 \end{figure}
+
+\subsection{A launch from Moodle}
+
+A student opens the ``Adaptive tutor'' activity of the course in Moodle.
+Moodle sends an OpenID Connect login request to \texttt{/lti/login}; the
+API checks the issuer and the client, stores a single-use \texttt{state}
+and \texttt{nonce} in Redis and redirects the browser to Moodle's
+authorization endpoint. Moodle then posts a signed \texttt{id\_token} to
+\texttt{/lti/launch}. The API verifies the token against Moodle's key set
+and checks its claims, records the deployment and the resource link with
+its line item, creates or updates the user, the course and the
+enrolment, and redirects the browser to the web app with the app's own
+session token in the URL fragment. The web app reads the token, removes
+it from the address bar and opens the course. The API then posts the
+student's current progress to the line item, as it does after every quiz
+answer.
+
+\subsection{An early warning and a teacher nudge}
+
+After each context sync, the Learning Analytics agent computes the
+eleven risk features of each student from the shared state and the
+recent activity, applies the logistic model, keeps the three largest
+positive contributions as reasons, and upserts the snapshot of the day.
+When the teacher opens the class page, the API asks the agents for the
+class view, which scores the students live and reads the snapshot of
+7 days earlier for the trend. A nudge sent by the teacher is stored as a
+follow-up with the score and the reasons, and as a \texttt{teacher\_nudge}
+intervention in the student's feed. The next views of the class page
+check the student's activity since the nudge and show whether they came
+back.
 
 \subsection{Course ingestion}
 
@@ -525,6 +603,26 @@ packages.
     \texttt{Message}s; an assistant message keeps its citations, intent,
     trace identifier and its \texttt{AgentStep}s.
 \end{description}
+Four groups of classes were added in the later sprints and are not drawn
+in \cref{fig-class-diagram}:
+\begin{description}[style=nextline, leftmargin=0.6cm]
+  \item[Personalization] The \texttt{Personalization} part of
+    \texttt{LearnerCourseState} holds the goal, the level, the preferred
+    style and the Beta posterior of each explanation style.
+    \texttt{MessageFeedback} records a rating of an answer, and
+    \texttt{RecommendationOverride} a pin or a skip by the teacher.
+  \item[Study] \texttt{StudyCondition} gives the arm and the pseudonym of
+    a student in a study; \texttt{StudyConsent} their answer and any
+    withdrawal. A \texttt{KnowledgeTest} (pre or post) holds copied items,
+    a \texttt{KnowledgeTestAttempt} the answers and the score, and a
+    \texttt{SusResponse} the questionnaire and its score.
+  \item[LTI] \texttt{LtiDeployment} records a platform deployment, and
+    \texttt{LtiResourceLink} the activity of a course with its line item.
+  \item[Early warning] A \texttt{RiskSnapshot} holds the features, the
+    score, the level and the reasons of a student for one day, with the
+    model version; a \texttt{RiskFollowup} records what the teacher did
+    and the score and reasons it acted on.
+\end{description}
 The \guillemotleft service\guillemotright{} \texttt{StateStore} is the only
 way for the agents to load and commit a learner state or a course
 context; its \texttt{commit\_turn} operation applies the optimistic
@@ -577,6 +675,17 @@ Context & \texttt{course\_context} & the course context & context (jsonb), versi
 Teacher & \texttt{question} & a reviewed bank question & status, options, answer\_index, reviewer \\
  & \texttt{course\_policy} & review mode and objectives & review\_mode, objectives (jsonb), version \\
  & \texttt{material\_suggestion} & a proposed change to the material & kind, evidence, diagnosis, draft, status \\
+Personalization & \texttt{message\_feedback} & a rating of a tutor answer & message, rating, reason \\
+ & \texttt{recommendation\_override} & a pin or skip by the teacher & topic\_key, action, note, user (or class) \\
+Study & \texttt{study\_condition} & arm of a student in a study & arm, pseudonym \\
+ & \texttt{study\_consent} & consent and withdrawal & consented, withdrawn\_at \\
+ & \texttt{knowledge\_test} & a pre-test or post-test & phase, items (jsonb) \\
+ & \texttt{knowledge\_test\_attempt} & one student's test & answers, correct, total \\
+ & \texttt{sus\_response} & the SUS questionnaire & answers, score \\
+LTI & \texttt{lti\_deployment} & a platform deployment & issuer, client\_id, deployment\_id \\
+ & \texttt{lti\_resource\_link} & an LTI activity of a course & resource\_link\_id, lineitem\_url \\
+Early warning & \texttt{risk\_snapshot} & daily risk of a student & day, score, level, features, reasons, model\_version \\
+ & \texttt{risk\_followup} & a teacher's follow-up & kind, message, score, reasons \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -630,11 +739,13 @@ Presentation & React, TypeScript, Vite & 19.3, 6.0, 8 & own interface, independe
 Gateway & NestJS (Node $\geq$ 22) & 12.3 & structured backend for auth, sessions and the Moodle client \\
  & Kysely, zod & -- & typed SQL from the schema; validation of requests \\
  & BullMQ (producer), JWT & 6.5, -- & background jobs; authentication \\
+ & jose & -- & LTI 1.3: verification of Moodle's tokens, signed assertions for AGS \\
 Agents & Python (uv), FastAPI & 3.12, 0.162 & Python ecosystem for LLMs, retrieval and evaluation \\
  & LangGraph, LangChain & 1.2, 1.4 & explicit agent graphs with conditional edges and custom streams \\
  & pydantic, psycopg & --, 3 & models of the shared state; PostgreSQL access \\
  & bullmq (consumer) & 3.4 & consumes the jobs produced by the API \\
  & Ragas & 0.4 & evaluation of faithfulness \\
+ & SciPy (development only) & 1.18 & statistics of the pilot analysis \\
 LLMs & Groq: \texttt{qwen/qwen3.8-27b} (tutor, router), \texttt{openai/gpt-oss-20b} (quiz and material writer) & -- & hosted models for quality and speed \\
  & Ollama: \texttt{qwen3:4b-instruct}, \texttt{bge-m3} (1024 dimensions) & -- & local option for privacy; multilingual embeddings \\
 Data & PostgreSQL + pgvector & 16 & one database for relational data, JSONB state and vectors \\
@@ -646,16 +757,9 @@ Quality & Vitest, msw, pytest, ESLint, Prettier, ruff, mypy & -- & tests (LLMs a
 \end{tabularx}
 \end{table}
 
-% =====================================================================
-\section*{Conclusion}
-\label{sec-d-conclusion}
-% =====================================================================
-
-This first part of the chapter has specified what the platform must do
-and how it is built: the requirements and use cases, the layered
-architecture with its gateway and its agents around one shared state, the
-behaviour of the main scenarios, the domain model, the database and the
-technology stack. Each choice is traced back to an architecture decision
-record. The second part of the chapter presents the development of the
-platform: its implementation, its interfaces and the tests that support
-the results reported in \cref{chap-contribution}.
+The design above specifies what the platform must do and how it is
+built: the requirements and use cases, the layered architecture with its
+gateway and its agents around one shared state, the behaviour of the main
+scenarios, the domain model, the database and the technology stack, each
+choice traced back to an architecture decision record. The following
+sections present the development of the platform.

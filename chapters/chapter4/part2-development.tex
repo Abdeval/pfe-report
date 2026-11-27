@@ -1,0 +1,301 @@
+% =====================================================================
+%  Chapter 4, Part 2: Development
+%  Sources: the code repository (git history, justfile, CI workflow,
+%  apps/*, eval/*), docs/adr/0001-0012, docs/eval/pilot-runbook.md.
+% =====================================================================
+
+% =====================================================================
+\section{Development process}
+\label{sec-d-process}
+% =====================================================================
+
+The framework was developed by one team in thirteen sprints. Each sprint
+had a single goal, its own git branch (\texttt{sprint-0},
+\texttt{sprint-1}, \dots), and ended with a working increment that was
+checked live on the demo course. Work inside a sprint was committed step
+by step, each commit with a message that states what changed and why.
+When a sprint took a decision that would be costly to reverse, it was
+written as an ADR before the code; when the live check or an evaluation
+changed the decision, the ADR was amended with the measured numbers.
+\Cref{tab-sprints} lists the sprints.
+
+\begin{table}[htbp]
+\centering
+\caption{Sprints of the development}
+\label{tab-sprints}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{0.9cm}L{3.2cm}YL{1.1cm}@{}}
+\toprule
+\textbf{Sprint} & \textbf{Goal} & \textbf{Main deliverables} & \textbf{ADR} \\
+\midrule
+0 & Infrastructure & Docker Compose stack, Moodle 4.5 image and idempotent seed, NestJS gateway with a typed Moodle client, continuous integration & 0001 \\
+1 & Grounded tutor & shared learner state and \texttt{StateStore}, ingestion worker, hybrid retrieval, LangGraph orchestrator and tutor, streamed chat with citations, Ragas evaluation & 0002 \\
+2 & Adaptive loop & BKT, quizzes validated in code and written in the background, recommendation rules, hosted LLM provider & 0003 \\
+3 & Context model & Context agent, course and learner contexts, proactive interventions & 0004 \\
+4 & Teacher in the loop & question bank with review, course objectives, class dashboard & 0005 \\
+5 & In-app course reader & sanitized pages, signed file links, in-app views counted as completion & 0006 \\
+6 & Material Improvement & five detectors, LLM drafts, teacher review, simulated classes with planted flaws & 0007 \\
+7 & Agent steps and interface & live agent steps in the chat, course-centred pages, quiz experience, teacher dashboard & 0008 \\
+8 & Learning-gain evaluation & simulated ablation, study module (arms, tests, SUS, export), revised ranking rule & 0009 \\
+9 & Interface foundation & application shell, shared components, accessible forms and tables, translations split by domain & -- \\
+10 & Explainable personalization & goals, learning path, structured reasons, style bandit, answer ratings, teacher pin and skip & 0010 \\
+11 & Ready for a pilot & LTI 1.3 launch, grades through AGS, consent, pseudonyms, analysis script, runbook & 0011 \\
+12 & Early warning & risk features and model, daily snapshots, warnings and teacher follow-up, evaluation & 0012 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Three rules applied throughout. First, the architecture of
+\cref{sec-d-arch} was fixed at sprint~0, and every later sprint worked
+inside it. Second, every boundary validates its data: zod schemas check
+the responses of Moodle and the configuration in the API, and pydantic
+models check the shared state and the requests in the agents. Third, the
+schema of the database changes only through a new migration, after which
+the API's types are regenerated and the pydantic models updated, so the
+three layers never disagree on a column.
+
+% =====================================================================
+\section{The code base}
+\label{sec-d-code}
+% =====================================================================
+
+The code is one repository with three applications and their
+infrastructure (\cref{tab-code-base}). The two TypeScript applications
+share a pnpm workspace; the Python agents are managed by uv. A single
+\texttt{justfile} gives the same commands to every developer and to the
+continuous integration.
+
+\begin{table}[htbp]
+\centering
+\caption{Organization of the code base (source files and lines, without
+generated code)}
+\label{tab-code-base}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}L{3.0cm}YL{2.2cm}@{}}
+\toprule
+\textbf{Folder} & \textbf{Content} & \textbf{Size} \\
+\midrule
+\texttt{apps/web} & React application: one folder per feature (auth, courses, course, reader, chat, quiz, context, personalization, teaching, study) & 145 files, 15\,500 lines \\
+\texttt{apps/api} & NestJS gateway: one module per domain (auth, LTI, Moodle client, reader, sessions, quizzes, context, personalization, teaching, study, internal endpoints) & 73 files, 6\,700 lines; tests 2\,300 lines \\
+\texttt{apps/agents} & Python agents: state, providers, ingestion, RAG, graph, assessment, diagnosis, recommendation, context, personalization, analytics, material; FastAPI service and worker & 60 files, 8\,900 lines; tests 4\,500 lines \\
+\texttt{eval} & evaluation scripts: tutor, quizzes, BKT, simulated classes, ablation, risk model, pilot analysis & 9 files, 3\,400 lines \\
+\texttt{infra} & Docker Compose, Moodle image and seed, 13 SQL migrations & -- \\
+\texttt{docs} & 12 ADRs, pilot protocol and runbook & -- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Each agent of \cref{tab-agents-roster} is a Python package with the same
+shape: a \emph{pure} part, which computes a decision from typed inputs
+(the BKT update, the ranking, the triggers, the detectors, the risk
+score), and a \emph{service} part, which loads the inputs, calls the pure
+part and commits the result through the \texttt{StateStore}. The pure
+parts are where the rules live; they are tested without a database or an
+LLM.
+
+\subsection{Optimistic concurrency in the StateStore}
+
+\Cref{lst-state-update} shows, slightly shortened, the loop that every
+change to a learner state goes through (\cref{sec-c1}). The change is a
+pure function \texttt{update}; the guarded \texttt{UPDATE} matches only
+if the version read is still the current one; otherwise nothing has been
+written, and the function is applied again to the fresh state. The
+optional \texttt{after} callback writes the rows that depend on the
+change, such as a quiz response, in the same transaction.
+
+\begin{lstlisting}[language=Python, caption={Applying a pure update to the shared learner state (\texttt{apps/agents/app/state/store.py}, shortened)}, label={lst-state-update}]
+for _ in range(self.max_retries):
+    async with self.pool.connection() as conn, conn.transaction():
+        new_state = update(expected.model_copy(deep=True))
+        cur = await conn.execute(
+            """
+            UPDATE learner_course_state
+            SET mastery = %s, misconceptions = %s, interaction_stats = %s,
+                context = %s, personalisation = %s, version = version + 1
+            WHERE user_id = %s AND course_id = %s AND version = %s
+            RETURNING version
+            """, (..., user_id, course_id, expected.version))
+        updated = await cur.fetchone()
+        if updated is None:
+            # another writer committed in between: nothing was written,
+            # so re-read the state and re-apply `update` on fresh data
+            expected = await self._course_state(conn, user_id, course_id)
+            continue
+        if after is not None:
+            await after(conn, expected, new_state)  # same transaction
+        return StateCommit(expected, new_state, updated[0])
+raise StateConflict("learner state kept changing")
+\end{lstlisting}
+
+\subsection{One provider interface for the models}
+
+Every call to a language model or to the embedding model goes through
+the provider interface of the agents. The provider and the model are
+chosen by environment variables, with optional overrides per role: the
+router, the tutor and the quiz writer can use different models. The same
+code therefore runs with a local model in Ollama, with Groq, or with any
+API compatible with OpenAI's; the embeddings stay on bge-m3 in Ollama,
+because the dimension of the vectors is fixed in the schema. In the
+tests, the provider is replaced by fake models that return scripted
+outputs.
+
+% =====================================================================
+\section{User interfaces}
+\label{sec-d-ui}
+% =====================================================================
+
+The students and the teachers never use Moodle's interface for the
+framework: the web application is its own interface, in French or
+English, opened from Moodle by the LTI activity. It is organized around
+the course. A sidebar lists the pages of the course, and the pages
+available depend on the role.
+
+\paragraph{Student pages.}
+\begin{itemize}
+  \item \emph{Overview}: the goal card, the learning path with the status
+        of each step, the ``For you now'' suggestions with their reasons,
+        and the upcoming deadlines. Every recommendation has a ``Why
+        this?'' popover that shows its structured reasons as sentences.
+  \item \emph{Read}: the course outline and the in-app reader for pages
+        and files, with locked activities shown with Moodle's sentence.
+  \item \emph{Tutor}: the chat, with the agent steps of each answer shown
+        live (classify, retrieve, adapt with the chosen style, generate),
+        the citations that open the reader at the cited passage, and a
+        thumbs up or down on each answer.
+  \item \emph{Quiz}: one question at a time, answered by mouse or keyboard,
+        with the feedback, the explanation and the mastery before and
+        after; a summary at the end.
+  \item \emph{My progress}: the mastery of each section against its target,
+        the misconceptions and the deadlines.
+  \item \emph{Study} (only during a study): the information sheet and the
+        consent, the pre-test, the post-test and the SUS questionnaire,
+        opened in this order, and the withdrawal.
+\end{itemize}
+
+\paragraph{Teacher pages.}
+\begin{itemize}
+  \item \emph{Class}: key indicators, the mastery heatmap (students by
+        sections), the early warnings with their reasons, trend and
+        follow-up, the risk column, the shared misconceptions, and the
+        pins and skips in force.
+  \item \emph{Questions}: the question bank of each section, with the
+        status and the use of each question, and the review actions.
+  \item \emph{Objectives}: the review mode, the target mastery of each
+        section and the key sections.
+  \item \emph{Course material}: the analysis button, the suggestions with
+        their evidence, diagnosis and draft, and their review.
+  \item \emph{Study}: the assignment of the arms, the building of the
+        tests, the results per student and the two exports.
+\end{itemize}
+
+\todonote{Insert screenshots: student overview (goal, path, ``Why
+this?''), tutor with agent steps, quiz feedback, teacher class page with
+early warnings, material suggestions. Capture them on the demo course
+after \texttt{just seed} and \texttt{just seed-class}.}
+
+The interface is responsive: the class page, which is the widest, was
+checked on a phone layout, where the warnings become compact cards. Form
+controls, tables and the heatmap carry labels for screen readers.
+
+% =====================================================================
+\section{Testing and quality}
+\label{sec-d-tests}
+% =====================================================================
+
+Quality rests on three kinds of checks (\cref{tab-tests}). The automated
+tests run in the continuous integration on every push, for each
+application that changed: linting, type checking, tests and build. No
+test calls a language model or a real Moodle: the agents use fake
+models, and the API replays recorded Moodle responses with msw and tests
+the LTI launch against a fake platform with its own key, including
+replayed and forged tokens.
+
+\begin{table}[htbp]
+\centering
+\caption{Automated checks}
+\label{tab-tests}
+\small
+\begin{tabularx}{\textwidth}{@{}L{2.6cm}L{4.2cm}Y@{}}
+\toprule
+\textbf{Application} & \textbf{Tools} & \textbf{What is checked} \\
+\midrule
+Agents & pytest (225 tests), ruff, mypy & pure decision functions, the \texttt{StateStore} on a real PostgreSQL, the agent graphs with fake models \\
+API & Vitest (about 100 tests), msw, ESLint & routes end to end on a test database, Moodle client against recorded responses, LTI launch and AGS \\
+Web & Vitest (91 tests), Testing Library, ESLint & pages and components, translations, role guards \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The second kind of check is the evaluation scripts
+(\cref{tab-eval-scripts}). Except for the tutor and quiz evaluations,
+they need no language model and no running stack: they call the agents'
+own decision code on simulated learners, with a fixed seed, and write a
+report with the numbers quoted in \cref{chap-contribution}.
+
+\begin{table}[htbp]
+\centering
+\caption{Evaluation scripts}
+\label{tab-eval-scripts}
+\small
+\begin{tabularx}{\textwidth}{@{}L{3.3cm}YL{2.2cm}@{}}
+\toprule
+\textbf{Command} & \textbf{What it measures} & \textbf{Results in} \\
+\midrule
+\texttt{just eval} & retrieval and faithfulness of the tutor (Ragas) & \cref{sec-c5} \\
+\texttt{just eval-quiz} & validity, timing and balance of generated quizzes & \cref{sec-c5} \\
+\texttt{just eval-bkt} & BKT on simulated profiles & \cref{sec-c3} \\
+\texttt{just eval-material} & detectors on simulated classes with planted flaws & \cref{sec-c7} \\
+\texttt{just eval-ablation} & learning gain: full, without context, baseline, style bandit & \cref{sec-c-eval,sec-c11} \\
+\texttt{just eval-risk} & fit and evaluation of the risk model against the rule flags & \cref{sec-c12} \\
+\texttt{just pilot-analysis} & the analysis plan of the pilot on its export & \cref{sec-c-eval} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The third kind is the live check at the end of each sprint, on the full
+stack with the demo course and, from sprint~6, a simulated class written
+through the agents' own services (\texttt{just seed-class}). These checks
+found defects that the tests with fake models could not show, for
+example diagnoses written in the wrong language by the Material
+Improvement agent, or interventions that stayed in the feed of a
+baseline student; each was fixed and covered by a test.
+
+% =====================================================================
+\section{Deployment and operation}
+\label{sec-d-deploy}
+% =====================================================================
+
+The whole platform starts from the repository with four commands:
+\texttt{just init} creates the configuration file with fresh secrets and
+the tool's LTI key, \texttt{just up} builds the images and waits until
+every service is healthy, \texttt{just seed} configures Moodle (web
+services, the service token, the LTI tool, the demo course and its
+users), and the teacher then indexes the course from the app. Secrets
+live only in the configuration file, which is never committed. The
+language model is chosen in the same file: a local model in Ollama by
+default, or a hosted one.
+
+For a pilot, the runbook of the repository lists the steps from the
+ethics approval to the report: turning off the development login, so
+that students can only enter through Moodle; registering the tool in the
+institution's Moodle; building the tests from approved questions;
+assigning the arms; checking the launch with a test student; and, at the
+end, exporting the pseudonymized results, running the analysis and
+handing the pseudonym key to the person who keeps it.
+
+% =====================================================================
+\section*{Conclusion}
+\addcontentsline{toc}{section}{Conclusion}
+% =====================================================================
+
+This chapter presented the design and the development of the framework.
+The design specifies the requirements, a layered architecture in which a
+gateway is the only Moodle client and the agents share one versioned
+learner state, the behaviour of the main scenarios, the domain model,
+the database and the technology stack, each choice traced to an ADR. The
+development followed thirteen sprints inside this architecture, kept the
+decisions in pure, tested functions, and checked each increment with
+automated tests that never call a language model, with evaluation
+scripts on simulated learners, and live on the demo course. The result
+is a platform that can be deployed from the repository and is ready for
+a pilot with a real class.

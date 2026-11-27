@@ -174,7 +174,28 @@
 \RequirePackage[hidelinks,unicode,bookmarksnumbered]{hyperref}
 \hypersetup{colorlinks=true,linkcolor=thprimary,citecolor=thaccent,
             urlcolor=thaccent}
+% Code listings (loaded before cleveref, which must come last)
+\RequirePackage{listings}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  columns=fullflexible,
+  keepspaces=true,
+  breaklines=true,
+  frame=lines,
+  framesep=4pt,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=6pt,
+  xleftmargin=1.5em,
+  commentstyle=\color{gray}\itshape,
+  keywordstyle=\color{thaccent}\bfseries,
+  stringstyle=\color{thprimary},
+  showstringspaces=false,
+  captionpos=t}
+\renewcommand{\lstlistingname}{Listing}
 \RequirePackage[nameinlink,noabbrev]{cleveref}
+\crefname{lstlisting}{listing}{listings}
+\Crefname{lstlisting}{Listing}{Listings}
 
 % ---------------------------------------------------------------------
 % Work-in-progress notes (load todonotes with [disable] before
