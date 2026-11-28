@@ -72,3 +72,5 @@ _build/
 .DS_Store
 Thumbs.db
 .vscode/
+
+thesis-preview.pdf
