@@ -292,18 +292,17 @@ multi-agent tutors built on language models, where our work sits.
 \centering
 \adjustbox{max width=\textwidth}{%
 \begin{tikzpicture}[
-  gen/.style={bloc,text width=2.4cm,minimum height=3.7cm,font=\footnotesize},
+  gen/.style={bloc,text width=9.4cm,minimum height=0.9cm,font=\footnotesize,align=left},
   genai/.style={gen,fill=thprimary,text=white},
-  node distance=0.3cm]
-  \node[gen] (g1) {\textbf{1950s--60s}\\[3pt]teaching machines, CAI (PLATO)\\[3pt]\textit{fixed branching}};
-  \node[gen,right=of g1] (g2) {\textbf{1970s--90s}\\[3pt]ITS (SCHOLAR, Cognitive Tutors)\\[3pt]\textit{learner and domain models}};
-  \node[gen,right=of g2] (g3) {\textbf{1990s--2000s}\\[3pt]adaptive hypermedia, LMS\\[3pt]\textit{rules, little adaptation}};
-  \node[gen,right=of g3] (g4) {\textbf{2010s}\\[3pt]MOOCs, adaptive platforms (ALEKS)\\[3pt]\textit{data-driven paths}};
-  \node[gen,right=of g4] (g5) {\textbf{2023--}\\[3pt]LLM tutors (Khanmigo, Duolingo Max)\\[3pt]\textit{dialogue, generation}};
-  \node[genai,right=of g5] (g6) {\textbf{2024--}\\[3pt]multi-agent LLM tutors\\[3pt]\textit{specialized agents}};
-  \draw[arrow] ([yshift=-0.35cm]g1.south west) -- ([yshift=-0.35cm]g6.south east)
-     node[pos=0,below right,font=\footnotesize,text=thgray]{more autonomy, richer dialogue}
-     node[pos=1,below left,font=\footnotesize,text=thgray]{our work};
+  node distance=0.22cm]
+  \node[gen]             (g1) {\textbf{1950s--60s}: teaching machines, CAI (PLATO)\\[-1pt]\textit{fixed branching}};
+  \node[gen,below=of g1] (g2) {\textbf{1970s--90s}: ITS (SCHOLAR, Cognitive Tutors)\\[-1pt]\textit{learner and domain models}};
+  \node[gen,below=of g2] (g3) {\textbf{1990s--2000s}: adaptive hypermedia, LMS\\[-1pt]\textit{rules, little adaptation}};
+  \node[gen,below=of g3] (g4) {\textbf{2010s}: MOOCs, adaptive platforms (ALEKS)\\[-1pt]\textit{data-driven paths}};
+  \node[gen,below=of g4] (g5) {\textbf{2023--}: LLM tutors (Khanmigo, Duolingo Max)\\[-1pt]\textit{dialogue, generation}};
+  \node[genai,below=of g5] (g6) {\textbf{2024--}: multi-agent LLM tutors (our work)\\[-1pt]\textit{specialized agents}};
+  \draw[arrow] ([xshift=-0.5cm]g1.north west) -- ([xshift=-0.5cm]g6.south west)
+     node[pos=0.5,sloped,above,font=\footnotesize,text=thgray]{more autonomy, richer dialogue};
 \end{tikzpicture}}
 \caption[From computer-assisted instruction to multi-agent tutors]{From
 computer-assisted instruction to multi-agent LLM tutors
@@ -692,25 +691,25 @@ references to them.
 \begin{figure}[htbp]
 \centering
 \adjustbox{max width=\textwidth}{%
-\begin{tikzpicture}[node distance=0.45cm and 0.55cm,
-  b/.style={bloc,text width=2.2cm,minimum height=1.1cm,font=\footnotesize}]
-  % indexing
+\begin{tikzpicture}[node distance=0.45cm,
+  b/.style={bloc,text width=3.0cm,minimum height=0.95cm,font=\footnotesize}]
+  % indexing (left column)
   \node[b] (doc) {Course documents};
-  \node[b,right=of doc] (chk) {Extract and chunk};
-  \node[b,right=of chk] (emb) {Embed};
-  \node[b,blocstrong,right=of emb] (idx) {Index\\(vectors + text)};
-  \node[layer,fit=(doc)(chk)(emb)(idx),
-        label={[font=\footnotesize\bfseries,text=thaccent]left:Indexing}] (I) {};
-  % answering
-  \node[b,below=1.4cm of doc] (q) {Question};
-  \node[b,right=of q] (ret) {Retrieve: dense + keyword, fused};
-  \node[b,right=of ret] (aug) {Prompt with passages};
-  \node[b,right=of aug] (gen) {LLM answer with citations};
-  \node[layer,fit=(q)(ret)(aug)(gen),
-        label={[font=\footnotesize\bfseries,text=thaccent]left:Answering}] (A) {};
+  \node[b,below=of doc] (chk) {Extract and chunk};
+  \node[b,below=of chk] (emb) {Embed};
+  \node[b,blocstrong,below=of emb] (idx) {Index\\(vectors + text)};
+  \node[layer,fit=(doc)(idx),
+        label={[font=\footnotesize\bfseries,text=thaccent]above:Indexing}] (I) {};
+  % answering (right column)
+  \node[b,right=2.2cm of doc] (q) {Question};
+  \node[b,below=of q] (ret) {Retrieve: dense + keyword, fused};
+  \node[b,below=of ret] (aug) {Prompt with passages};
+  \node[b,below=of aug] (gen) {LLM answer with citations};
+  \node[layer,fit=(q)(gen),
+        label={[font=\footnotesize\bfseries,text=thaccent]above:Answering}] (A) {};
   \draw[arrow] (doc) -- (chk); \draw[arrow] (chk) -- (emb); \draw[arrow] (emb) -- (idx);
   \draw[arrow] (q) -- (ret); \draw[arrow] (ret) -- (aug); \draw[arrow] (aug) -- (gen);
-  \draw[arrow] (idx.south) |- ([yshift=0.35cm]ret.north) -- (ret.north);
+  \draw[arrow] (idx.east) -- ++(0.55,0) |- (ret.west);
 \end{tikzpicture}}
 \caption{Retrieval-augmented generation: indexing and answering}
 \label{fig-rag}
@@ -909,10 +908,11 @@ and easier to test; agents are more flexible. \Cref{fig-orchestration} and
   ar/.style={-{Stealth[length=1.8mm]},thick,draw=thgray},
   panel/.style={draw=thaccent,rounded corners=4pt,dashed,minimum width=3.0cm,minimum height=2.5cm},
   t/.style={font=\footnotesize\bfseries,text=thprimary}]
-  % every panel is 3.0 cm x 2.5 cm, centred at (x, -0.9)
-  \foreach \x/\t in {0/(a) Router, 3.4/(b) Pipeline, 6.8/(c) Hierarchy, 10.2/(d) Graph, 13.6/(e) Shared state} {
-    \node[panel] at (\x,-0.9) {};
-    \node[t] at (\x,0.65) {\t};
+  % two panels per row; every panel is 3.0 cm x 2.5 cm, centred at (x, y-0.9)
+  \foreach \x/\y/\t in {0/0/(a) Router, 3.4/0/(b) Pipeline, 0/-3.4/(c) Hierarchy,
+                        3.4/-3.4/(d) Graph, 1.7/-6.8/(e) Shared state} {
+    \node[panel] at (\x,\y-0.9) {};
+    \node[t] at (\x,\y+0.65) {\t};
   }
   % (a) router
   \node[o] (r) at (0,-0.15) {Router};
@@ -922,24 +922,30 @@ and easier to test; agents are more flexible. \Cref{fig-orchestration} and
   \node[a] (p1) at (2.45,-0.9) {A}; \node[a] (p2) at (3.4,-0.9) {B}; \node[a] (p3) at (4.35,-0.9) {C};
   \draw[ar] (p1) -- (p2); \draw[ar] (p2) -- (p3);
   % (c) hierarchy
-  \node[o] (h) at (6.8,-0.15) {Lead};
-  \node[a] (h1) at (6.1,-0.9) {S1}; \node[a] (h2) at (7.5,-0.9) {S2};
-  \node[a] (h3) at (5.75,-1.75) {W}; \node[a] (h4) at (6.45,-1.75) {W};
-  \node[a] (h5) at (7.5,-1.75) {W};
+  \begin{scope}[yshift=-3.4cm]
+  \node[o] (h) at (0,-0.15) {Lead};
+  \node[a] (h1) at (-0.7,-0.9) {S1}; \node[a] (h2) at (0.7,-0.9) {S2};
+  \node[a] (h3) at (-1.05,-1.75) {W}; \node[a] (h4) at (-0.35,-1.75) {W};
+  \node[a] (h5) at (0.7,-1.75) {W};
   \draw[ar] (h) -- (h1); \draw[ar] (h) -- (h2);
   \draw[ar] (h1) -- (h3); \draw[ar] (h1) -- (h4); \draw[ar] (h2) -- (h5);
+  \end{scope}
   % (d) graph with conditional edges
-  \node[a] (g1) at (9.35,-0.15) {A}; \node[a] (g2) at (10.5,-0.15) {B};
-  \node[a] (g3) at (9.75,-1.65) {C}; \node[a] (g4) at (11.0,-1.65) {D};
+  \begin{scope}[yshift=-3.4cm]
+  \node[a] (g1) at (2.55,-0.15) {A}; \node[a] (g2) at (3.7,-0.15) {B};
+  \node[a] (g3) at (2.95,-1.65) {C}; \node[a] (g4) at (4.2,-1.65) {D};
   \draw[ar] (g1) -- (g2);
   \draw[ar] (g2) -- node[right,font=\scriptsize,text=thgray]{if} (g4);
   \draw[ar] (g2) -- node[left,font=\scriptsize,text=thgray]{else} (g3);
   \draw[ar] (g3) -- (g4);
+  \end{scope}
   % (e) shared state
-  \node[o] (s) at (13.6,-0.95) {State};
-  \node[a] (s1) at (12.75,-0.15) {A}; \node[a] (s2) at (14.45,-0.15) {B};
-  \node[a] (s3) at (13.6,-1.85) {C};
+  \begin{scope}[yshift=-6.8cm]
+  \node[o] (s) at (1.7,-0.95) {State};
+  \node[a] (s1) at (0.85,-0.15) {A}; \node[a] (s2) at (2.55,-0.15) {B};
+  \node[a] (s3) at (1.7,-1.85) {C};
   \draw[ar,<->] (s1) -- (s); \draw[ar,<->] (s2) -- (s); \draw[ar,<->] (s3) -- (s);
+  \end{scope}
 \end{tikzpicture}}
 \caption{Main orchestration patterns of multi-agent systems}
 \label{fig-orchestration}

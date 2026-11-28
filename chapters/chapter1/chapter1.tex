@@ -67,18 +67,17 @@ integrate generative artificial intelligence.
 \centering
 \adjustbox{max width=\textwidth}{%
 \begin{tikzpicture}[
-  gen/.style={bloc,text width=2.35cm,minimum height=2.6cm,font=\footnotesize},
+  gen/.style={bloc,text width=8.8cm,minimum height=0.9cm,font=\footnotesize,align=left},
   genai/.style={gen,fill=thprimary,text=white},
-  node distance=0.35cm]
-  \node[gen]               (g1) {\textbf{Corres\-pondence}\\[3pt]print,\\postal mail};
-  \node[gen,right=of g1]   (g2) {\textbf{Multimedia}\\[3pt]radio, television,\\cassettes};
-  \node[gen,right=of g2]   (g3) {\textbf{Tele-learning}\\[3pt]video and audio\\conferencing};
-  \node[gen,right=of g3]   (g4) {\textbf{Online learning}\\[3pt]web, LMS,\\forums};
-  \node[gen,right=of g4]   (g5) {\textbf{Open platforms}\\[3pt]MOOCs, mobile,\\analytics};
-  \node[genai,right=of g5] (g6) {\textbf{AI-augmented}\\\textbf{platforms}\\[3pt]LLMs, agents,\\adaptation};
-  \draw[arrow] ([yshift=-0.35cm]g1.south west) -- ([yshift=-0.35cm]g6.south east)
-     node[pos=0,below right,font=\footnotesize,text=thgray]{more interaction, finer monitoring}
-     node[pos=1,below left,font=\footnotesize,text=thgray]{time};
+  node distance=0.22cm]
+  \node[gen]             (g1) {\textbf{Correspondence}: print, postal mail};
+  \node[gen,below=of g1] (g2) {\textbf{Multimedia}: radio, television, cassettes};
+  \node[gen,below=of g2] (g3) {\textbf{Tele-learning}: video and audio conferencing};
+  \node[gen,below=of g3] (g4) {\textbf{Online learning}: web, LMS, forums};
+  \node[gen,below=of g4] (g5) {\textbf{Open platforms}: MOOCs, mobile, analytics};
+  \node[genai,below=of g5] (g6) {\textbf{AI-augmented platforms}: LLMs, agents, adaptation};
+  \draw[arrow] ([xshift=-0.5cm]g1.north west) -- ([xshift=-0.5cm]g6.south west)
+     node[pos=0.5,sloped,above,font=\footnotesize,text=thgray]{time: more interaction, finer monitoring};
 \end{tikzpicture}}
 \caption[Generations of distance education]{Generations of distance
 education, after \citet{taylor2001} and Moore and Kearsley~\cite{moore2012},
@@ -568,23 +567,21 @@ without modifying its core. They are summarized in
 \begin{figure}[htbp]
 \centering
 \adjustbox{max width=\textwidth}{%
-\begin{tikzpicture}[node distance=0.5cm and 1.6cm,
-  b/.style={bloc,text width=3.4cm,minimum height=0.9cm}]
-  \node[blocstrong,text width=3.4cm,minimum height=5.6cm] (moodle)
-     {Moodle\\[4pt]\mdseries\footnotesize unmodified core\\ database\\ moodledata};
-  \node[b,right=of moodle,yshift=2.1cm] (ws)  {REST web services};
-  \node[b,below=of ws]                  (ev)  {Events and logs};
-  \node[b,below=of ev]                  (lti) {LTI 1.3 and Advantage};
-  \node[b,below=of lti]                 (ai)  {AI subsystem};
-  \node[bloc,fill=white,draw=thaccent,text width=3.2cm,minimum height=5.6cm,
-        right=1.6cm of ev.east,yshift=-0.7cm] (svc)
-     {\textbf{External service}\\[4pt]\footnotesize
-      reads courses, grades and traces; interface embedded in the
-      course; calls language models};
-  \foreach \n in {ws,ev,lti,ai}{
-    \draw[arrow,<->] (moodle.east |- \n.west) -- (\n.west);
-    \draw[arrow,<->] (\n.east) -- (svc.west |- \n.east);
-  }
+\begin{tikzpicture}[
+  b/.style={bloc,text width=3.6cm,minimum height=0.9cm}]
+  \node[blocstrong,text width=8.6cm,minimum height=1.1cm] (moodle)
+     {Moodle\quad\mdseries\footnotesize unmodified core, database, moodledata};
+  \node[b] (ws)  at ([xshift=-2.15cm,yshift=-2.1cm]moodle.south) {REST web services};
+  \node[b] (ev)  at ([xshift=2.15cm,yshift=-2.1cm]moodle.south)  {Events and logs};
+  \node[b,below=0.35cm of ws] (lti) {LTI 1.3 and Advantage};
+  \node[b,below=0.35cm of ev] (ai)  {AI subsystem};
+  \node[layer,fit=(ws)(ev)(lti)(ai),inner sep=8pt] (pts) {};
+  \node[bloc,fill=white,draw=thaccent,text width=8.6cm,minimum height=1.1cm,
+        below=1.1cm of pts] (svc)
+     {\textbf{External service}\\[1pt]\footnotesize reads courses, grades and traces;
+      interface embedded in the course; calls language models};
+  \draw[arrow,<->] (moodle.south) -- (pts.north);
+  \draw[arrow,<->] (pts.south) -- (svc.north);
 \end{tikzpicture}}
 \caption{Moodle's integration points with an external service}
 \label{fig-moodle-integration-points}
@@ -639,25 +636,24 @@ illustrated in \cref{fig-moodle-ai}:
 \centering
 \adjustbox{max width=\textwidth}{%
 \begin{tikzpicture}[
-  b/.style={bloc,text width=3.4cm,minimum height=0.8cm},
-  ttl/.style={font=\footnotesize\bfseries,text=thaccent}]
-  % three groups, centred on the same horizontal axis (y = 0)
-  \node[b] (p1) at (0, 0.55) {Text editor};
-  \node[b] (p2) at (0,-0.55) {Course assistance};
-  \node[b] (a1) at (5.0, 1.1) {Generate text};
-  \node[b] (a2) at (5.0, 0.0) {Generate an image};
-  \node[b] (a3) at (5.0,-1.1) {Summarize, explain};
-  \node[b] (f1) at (10.0, 1.1) {OpenAI};
-  \node[b] (f2) at (10.0, 0.0) {Azure AI};
-  \node[b] (f3) at (10.0,-1.1) {Ollama, others};
+  b/.style={bloc,text width=2.7cm,minimum height=0.8cm},
+  ttl/.style={font=\footnotesize\bfseries,text=thaccent,anchor=south west}]
+  \node[b] (p1) at (-1.6, 0) {Text editor};
+  \node[b] (p2) at ( 1.6, 0) {Course assistance};
+  \node[b] (a1) at (-3.2,-2.2) {Generate text};
+  \node[b] (a2) at ( 0.0,-2.2) {Generate an image};
+  \node[b] (a3) at ( 3.2,-2.2) {Summarize, explain};
+  \node[b] (f1) at (-3.2,-4.4) {OpenAI};
+  \node[b] (f2) at ( 0.0,-4.4) {Azure AI};
+  \node[b] (f3) at ( 3.2,-4.4) {Ollama, others};
   \node[layer,fit=(p1)(p2)] (P) {};
   \node[layer,fit=(a1)(a3)] (A) {};
   \node[layer,fit=(f1)(f3)] (F) {};
   \foreach \g/\t in {P/Placements,A/Actions,F/Providers}
-    \node[ttl,above=2pt] at (\g.north |- A.north) {\t};
-  \draw[arrow] (P.east |- 0,0) -- (A.west |- 0,0);
-  \draw[arrow] (A.east |- 0,0) -- (F.west |- 0,0);
-  \node[below=0.5cm of A,font=\footnotesize,text=thgray,text width=11cm,align=center]
+    \node[ttl] at (\g.north west) {\t};
+  \draw[arrow] (P.south) -- (A.north);
+  \draw[arrow] (A.south) -- (F.north);
+  \node[below=0.35cm of F,font=\footnotesize,text=thgray,text width=9.5cm,align=center]
     {Configured by the administrator: activation, usage limits, system
      instructions; requests are logged};
 \end{tikzpicture}}
