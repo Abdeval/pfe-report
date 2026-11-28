@@ -31,18 +31,19 @@
   \draw[arr] (s5.south east) -- ([yshift=1.5mm]l2.west);
   \draw[arr] (s2) -- ([yshift=-1.5mm]l2.west);
   \draw[arr] (s3) -- (l4);
-  % ---------------------------------------------------------------- consumers
-  \node[font=\footnotesize\bfseries, text=pMuted] at (7.6, 4.5) {Consumers};
-  \node[use] (u1) at (7.6, 2.4) {Recommendation\\ranking + reason};
-  \node[use] (u2) at (7.6, 0.6) {Tutor\\context hint};
-  \node[use] (u3) at (7.6,-1.2) {Interventions\\4 rule-based triggers};
-  \node[use] (u4) at (7.6,-3.0) {Class dashboard\\risk flags};
-  % both contexts are read through one collector (the StateStore)
-  \coordinate (bus) at (4.85,0);
-  \draw[very thick, draw=pMuted, line cap=round] (bus |- C.east) -- (bus |- u4);
-  \draw[thick, draw=pMuted] (C.east) -- (C.east -| bus);
-  \draw[thick, draw=pMuted] (Lc.east |- l2) -- (l2 -| bus);
-  \foreach \u in {u1,u2,u3,u4} \draw[arr] (bus |- \u) -- (\u.west);
-  \node[font=\scriptsize, text=pMuted, rotate=90, anchor=south] at ([xshift=-1mm]bus |- 0,-0.3) {read through the StateStore};
+  % ---------------------------------------------------------------- consumers (bottom row)
+  \coordinate (busy) at ($(Lc.south)+(0,-0.75)$);
+  \coordinate (bR) at (3.75,0);
+  \foreach \u/\x/\t in {u1/-7.05/{Recommendation\\ranking, path, reasons},
+                        u2/-3.95/{Tutor\\context hint},
+                        u3/-0.85/{Interventions\\4 rule-based triggers},
+                        u4/2.25/{Class dashboard\\flags, early warning}}
+    \node[use, minimum width=27mm, text width=25mm, anchor=north] (\u) at ($({\x,0} |- busy)+(0,-0.75)$) {\t};
+  \draw[very thick, draw=pMuted, line cap=round] (u1 |- busy) -- (bR |- busy);
+  \draw[thick, draw=pMuted] (Lc.south) -- (Lc.south |- busy);
+  \draw[thick, draw=pMuted] (C.east) -- (bR |- C.east) -- (bR |- busy);
+  \foreach \u in {u1,u2,u3,u4} \draw[arr] (\u |- busy) -- (\u.north);
+  \node[font=\scriptsize, text=pMuted, anchor=south west] at ([yshift=0.5mm]u1 |- busy) {read through the StateStore};
+  \node[font=\footnotesize\bfseries, text=pMuted, anchor=south west] at ([yshift=4mm]u1 |- busy) {Consumers};
 \end{tikzpicture}
 \end{document}

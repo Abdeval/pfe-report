@@ -10,8 +10,8 @@
   \node[ag] (dia) at (4.3, 0.0) {\textbf{Diagnosis}\\BKT update of $P(L)$,\\misconceptions};
   \node[store, minimum width=36mm, minimum height=14mm, draw=pAgent, fill=pAgent!10, font=\scriptsize]
     (st) at (0,-2.9) {\textbf{Shared state}\\mastery, misconceptions,\\context (versioned)};
-  \node[ag] (rec) at (-4.3, 0.0) {\textbf{Recommendation}\\ranked sections,\\each with a reason};
-  \node[api, font=\scriptsize, minimum width=29mm, minimum height=13mm, align=center] (rev) at (9.6, 3.3)
+  \node[ag] (rec) at (-4.3, 0.0) {\textbf{Recommendation}\\path and ranked sections,\\each with its reasons};
+  \node[api, font=\scriptsize, minimum width=29mm, minimum height=13mm, align=center] (rev) at (4.3, 6.2)
     {\textbf{Teacher review}\\question bank\\(\texttt{review} mode)};
   \node[agent, font=\scriptsize, minimum width=34mm, align=center, fill=white] (ctx) at (0,-5.5)
     {\textbf{Context agent}\\deadlines, inactivity,\\failed quiz, prerequisites};
@@ -20,11 +20,11 @@
   \draw[arr] ([xshift=4mm]learner-c |- ass.west) -- node[slbl, above=2pt] {starts a quiz\\on a section} (ass.west);
   \draw[arr] (ass) -- node[slbl] {graded answer\\(code, no LLM)} (dia);
   \draw[arr] (dia.south) |- node[slbl, pos=0.25] {commit\\(optimistic\\concurrency)} (st.east);
-  \draw[arr] (st.west) -| node[slbl, pos=0.75] {mastery,\\context,\\objectives} (rec.south);
+  \draw[arr] (st.west) -| node[slbl, pos=0.75] {mastery, context,\\objectives, goal,\\teacher pins} (rec.south);
   \draw[arr] (rec.north) |- node[slbl, pos=0.25] {next section\\+ why} ([xshift=-4mm]learner-c |- 0,3.1);
   % side paths
-  \draw[->, thick, draw=pApi, dashed] ([yshift=3mm]ass.east) -- node[slbl, above=2pt] {new questions} ([yshift=3mm]rev.west);
-  \draw[->, thick, draw=pApi, dashed] ([yshift=-3mm]rev.west) -- node[slbl, below=2pt] {approved} ([yshift=-3mm]ass.east);
+  \draw[->, thick, draw=pApi, dashed] ([xshift=6mm]ass.north) -- node[slbl, right=2pt] {new questions} ([xshift=6mm]rev.south);
+  \draw[->, thick, draw=pApi, dashed] ([xshift=-6mm]rev.south) -- node[slbl, left=2pt] {approved} ([xshift=-6mm]ass.north);
   \draw[->, thick, draw=pMuted] (ctx) -- node[slbl] {writes context\\and interventions} (st);
   \draw[->, thick, draw=pMuted, dashed] (st.north) -- node[slbl] {reads} (tut.south);
 \end{tikzpicture}
