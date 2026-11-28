@@ -18,9 +18,9 @@
       fit=(web)(moodle)(ag)(mdb)(mig)(rd), inner xsep=9pt, inner ysep=14pt] (host) {};
   \end{scope}
   % ---------------------------------------------------------------- outside the host
-  \node[ai, font=\scriptsize, minimum width=30mm, minimum height=11mm] (groq) at (14.6, 0.0)
+  \node[ai, font=\scriptsize, minimum width=30mm, minimum height=11mm] (groq) at (4.6,-7.0)
     {\textbf{Groq API}\\hosted chat models};
-  \node[ai, font=\scriptsize, minimum width=30mm, minimum height=11mm] (oll) at (14.6,-2.2)
+  \node[ai, font=\scriptsize, minimum width=30mm, minimum height=11mm] (oll) at (9.2,-7.0)
     {\textbf{Ollama} $\cdot$ :11434\\local chat model, bge-m3};
   \begin{scope}[on background layer]
     \node[layer={pAi}{\guillemotleft cloud\guillemotright}, fit=(groq), inner ysep=13pt] {};
@@ -36,16 +36,17 @@
   \draw[rw]   (api) -- node[lbl] {SQL} (pg);
   \draw[rw]   (ag.south west) -- node[lbl, pos=0.45] {SQL} (pg.north east);
   \draw[rw]   (wk) -- node[lbl] {SQL} (pg);
-  \draw[call] (ag) -- node[lbl] {HTTPS} (groq);
-  \draw[call] (ag.south east) -- node[lbl, pos=0.45] {HTTP} ([yshift=2.5mm]oll.west);
-  \draw[call] (wk.east) -- node[lbl, pos=0.45] {embeddings} (oll.west |- wk.east);
+  % model providers, along the right edge of the host
+  \draw[call] ([yshift=2mm]ag.east) -- (12.05,0.2) -- (12.05,-8.35) -| node[lbl, pos=0.25] {HTTPS} (groq.south);
+  \draw[call] ([yshift=-2mm]ag.east) -- (11.6,-0.2) |- node[lbl, pos=0.25] {HTTP} ([yshift=2mm]oll.east);
+  \draw[call] (wk.east) -- node[lbl] {embeddings} (11.6,-2.2);
   \draw[async] (mig) -- node[lbl] {schema} (pg);
   \draw[async] (rd) -- node[lbl] {consume} (wk);
   % jobs: from the API around the left of postgres and under migrate, up into redis
   \draw[async] ([yshift=-3mm]api.west) -- ++(-5mm,0) coordinate (j1)
      -- (j1 |- 0,-5.2) -| node[lbl, pos=0.25] {jobs} (rd.south);
   % ---------------------------------------------------------------- legend
-  \node[note, anchor=north west] at ([yshift=-11mm]oll.south west)
+  \node[note, anchor=north west] at (-0.6,-6.45)
     {\tikz[baseline=-0.5ex]\draw[call] (0,0) -- (0.5,0); request\\
      \tikz[baseline=-0.5ex]\draw[async] (0,0) -- (0.5,0); queued job / one-shot\\
      \tikz[baseline=-0.5ex]\draw[rw] (0,0) -- (0.5,0); data read/write};

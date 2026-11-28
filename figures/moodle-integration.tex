@@ -1,41 +1,57 @@
 \documentclass[tikz,border=4pt]{standalone}
 \input{pfe-style}
+% Moodle integration, read top to bottom: Moodle, the two channels (web
+% services, read only; LTI 1.3, launch and the progress grade), the gateway,
+% then the in-app reader and the views it records.
 \begin{document}
 \begin{tikzpicture}[
   ws/.style={rectangle, draw=pLms, fill=white, font=\scriptsize\ttfamily, inner sep=2.5pt,
-    minimum width=72mm, text width=69mm, align=left, anchor=west},
+    text width=66mm, align=left},
+  lt/.style={rectangle, draw=pApi, fill=white, font=\scriptsize, inner sep=2.5pt,
+    text width=52mm, align=left},
   slbl/.style={font=\scriptsize, fill=white, inner sep=1.5pt, align=center}]
   % ---------------------------------------------------------------- Moodle
-  \node[lms, minimum width=25mm, minimum height=48mm, align=center] (moodle) at (0,0)
-    {\textbf{Moodle 4.5 LTS}\\[2mm]\scriptsize courses, sections,\\\scriptsize activities, files,\\
-     \scriptsize completion, grades\\[3mm]\scriptsize core never modified};
-  % web services list
-  \node[ws] (w1) at (2.0, 2.0) {core\_course\_get\_contents};
+  \node[lms, minimum width=140mm, text width=136mm, minimum height=12mm] (moodle) at (6.6,0)
+    {\textbf{Moodle 4.5 LTS}\quad\scriptsize courses, sections, activities, files, completion,
+     grades, gradebook \quad$\cdot$\quad core never modified};
+  % ------------------------------------------------- channel 1: web services
+  \node[ws, anchor=north west] (w1) at (0.1,-1.9) {core\_course\_get\_contents};
   \node[ws, below=1mm of w1] (w2) {core\_enrol\_get\_enrolled\_users};
   \node[ws, below=1mm of w2] (w3) {core\_completion\_get\_activities\_completion\_status};
   \node[ws, below=1mm of w3] (w4) {gradereport\_user\_get\_grade\_items};
   \node[ws, below=1mm of w4] (w5) {mod\_quiz\_get\_user\_attempts};
   \node[ws, below=1mm of w5] (w6) {files: webservice/pluginfile.php};
+  % ------------------------------------------------------ channel 2: LTI 1.3
+  \node[lt, anchor=north west] (l1) at (7.9,-1.9) {\textbf{OIDC login} \texttt{/lti/login}\\
+    single-use state and nonce};
+  \node[lt, below=1mm of l1] (l2) {\textbf{Launch} \texttt{/lti/launch}\\signed id\_token checked:
+    issuer, audience, nonce, version};
+  \node[lt, below=1mm of l2] (l3) {\textbf{AGS score} on the activity's line item\\
+    course progress, after each answer: \textbf{the only write}};
   \begin{scope}[on background layer]
-    \node[layer={pLms}{Web services used (REST, token)}, fit=(w1)(w6), inner ysep=13pt] (WS) {};
+    \node[layer={pLms}{Web services (REST, token): read only}, fit=(w1)(w6)] (WS) {};
+    \node[layer={pApi}{LTI 1.3 (standard): launch and grade}, fit=(l1)(l3)(l3 |- w6.south)] (LT) {};
   \end{scope}
   % ---------------------------------------------------------------- API
-  \node[api, minimum width=32mm, minimum height=26mm, align=center, very thick] (api) at (13.8, 0.4)
-    {\textbf{API gateway (NestJS)}\\[1mm]\scriptsize the only Moodle client\\\scriptsize holds the single token\\
-     \scriptsize sanitises page HTML\\\scriptsize signs file links (HMAC, 1\,h)};
-  \node[web, minimum width=32mm, align=center] (reader) at (13.8,-3.1)
+  \node[api, minimum width=140mm, text width=136mm, very thick, align=center] (api)
+    at ($(WS.south)!0.5!(LT.south)+(0,-1.55)$)
+    {\textbf{API gateway (NestJS)}: the only Moodle client $\cdot$ holds the single token $\cdot$
+     sanitizes page HTML $\cdot$ signs file links (HMAC, 1\,h) $\cdot$ verifies launches $\cdot$ posts scores};
+  % ------------------------------------------------- reader and recorded views
+  \node[web, minimum width=48mm, align=center] (reader) at ([yshift=-2.1cm]api.south -| WS)
     {\textbf{In-app reader}\\\scriptsize pages, PDFs, images};
-  \actor{student}{13.8,-5.6}{Student}
-  \node[store, minimum width=30mm, font=\scriptsize] (db) at (7.0,-3.4)
+  \actor{student}{$(reader.south)+(0,-1.55)$}{Student}
+  \node[store, minimum width=48mm, font=\scriptsize] (db) at (reader -| LT)
     {\textbf{activity\_view}\\views, reading seconds\\\texttt{enrolment.last\_access\_at}};
+  \node[note, below=3mm of db, text width=46mm, align=center, text=pLms, draw=pLms]
+    {completion is never written back to Moodle};
   % ---------------------------------------------------------------- flows
-  \draw[call] (WS.east |- api) -- node[slbl, above=2pt] {GET (read-only)} (api.west);
-  \draw[call] (moodle.east |- WS) -- (WS.west);
-  \draw[call] (api) -- node[slbl] {sanitized HTML,\\signed URLs} (reader);
-  \draw[call] (student-c) ++(0,0.55) -- (reader.south);
-  \draw[rw] (reader.west) -- node[slbl, pos=0.45] {in-app views\\recorded} (db.east |- reader.west);
-  % forbidden write-back
-  \draw[forbid, very thick] (db.west) -| node[pos=0.25, font=\large\bfseries, text=pLms] {$\times$}
-     node[slbl, below=4pt, text=pLms, pos=0.25] {no write to Moodle} (moodle.south);
+  \draw[call] (moodle.south -| WS) -- (WS.north);
+  \draw[call, <->] (moodle.south -| LT) -- (LT.north);
+  \draw[call] (WS.south) -- node[slbl, right=2pt] {GET (read only)} (WS.south |- api.north);
+  \draw[call, <->] (LT.south) -- node[slbl, right=2pt] {launch in, score out} (LT.south |- api.north);
+  \draw[call] (api.south -| reader) -- node[slbl, right=2pt] {sanitized HTML, signed URLs} (reader.north);
+  \draw[call] ([yshift=0.55cm]student-c) -- (reader.south);
+  \draw[rw] (reader.east) -- node[slbl, above=2pt, fill=none] {views} (db.west);
 \end{tikzpicture}
 \end{document}
