@@ -1,49 +1,54 @@
 \documentclass[tikz,border=4pt]{standalone}
 \input{pfe-style}
+% Use cases, read top to bottom: the student's use cases, then the teacher's;
+% primary actors on the left, secondary (system) actors on the right.
 \begin{document}
 \begin{tikzpicture}[
-  uc/.style={usecase, minimum width=33mm, minimum height=9mm},
+  uc/.style={usecase, minimum width=40mm, minimum height=8.5mm},
+  inc/.style={usecase, fill=white, minimum width=36mm, minimum height=8.5mm},
   assoc/.style={draw=pInk, thick},
   dep/.style={draw=pMuted, dashed, -{Stealth[length=1.8mm]}},
-  dlbl/.style={font=\scriptsize, fill=white, inner sep=1pt, text=pMuted}]
-  % ---------------------------------------------------------------- student use cases (left column)
-  \node[uc] (s1) at (0, 4.8) {Read course activity};
-  \node[uc] (s2) at (0, 3.4) {Ask the tutor};
-  \node[uc] (s3) at (0, 2.0) {Take adaptive quiz};
-  \node[uc] (s4) at (0, 0.6) {View progress};
-  \node[uc] (s5) at (0,-0.8) {Act on suggestions};
-  % included use cases (middle)
-  \node[uc, fill=white] (i1) at (4.1, 3.4) {Retrieve course\\passages};
-  \node[uc, fill=white] (i2) at (4.1, 2.0) {Update mastery};
-  % ---------------------------------------------------------------- teacher use cases (right column)
-  \node[uc] (t1) at (8.2, 4.8) {Index course};
-  \node[uc] (t2) at (8.2, 3.4) {Review question bank};
-  \node[uc] (t3) at (8.2, 2.0) {Set objectives and\\review mode};
-  \node[uc] (t4) at (8.2, 0.6) {Monitor class};
-  \node[uc] (t5) at (8.2,-0.8) {Analyse material};
-  % scheduler
-  \node[uc] (c1) at (4.1,-2.0) {Sync context};
-  % system boundary
+  dlbl/.style={font=\tiny, fill=white, inner sep=1pt, text=pMuted}]
+  \def\dy{1.12}
+  % ---------------------------------------------------------------- student
+  \foreach \i/\t in {1/{Launch from Moodle (LTI)}, 2/{Read course activity}, 3/{Ask the tutor},
+                     4/{Take adaptive quiz}, 5/{Set goal, follow path}, 6/{View progress},
+                     7/{Act on suggestions}, 8/{Take part in a study}}
+    \node[uc] (s\i) at (0,{-(\i-1)*\dy}) {\t};
+  \node[inc] (i1) at (4.9,{-2*\dy}) {Retrieve course\\passages};
+  \node[inc] (i2) at (4.9,{-3*\dy}) {Update mastery};
+  \node[inc] (i3) at (4.9,{-4*\dy}) {Send progress grade};
+  \draw[dep] (s3) -- node[dlbl, above] {\guillemotleft include\guillemotright} (i1);
+  \draw[dep] (s4) -- node[dlbl, above] {\guillemotleft include\guillemotright} (i2);
+  \draw[dep] (s4.east) -- node[dlbl, below, sloped] {\guillemotleft include\guillemotright} (i3.west);
+  % ---------------------------------------------------------------- teacher
+  \def\ty{-10.2}
+  \foreach \i/\t in {1/{Index course}, 2/{Review question bank}, 3/{Set objectives,\\review mode},
+                     4/{Steer recommendations\\(pin, skip)}, 5/{Monitor class},
+                     6/{Act on early warning}, 7/{Analyse material}, 8/{Run a study}}
+    \node[uc] (t\i) at (0,{\ty-(\i-1)*\dy}) {\t};
+  \node[inc] (c1) at (4.9,{\ty-5*\dy}) {Sync context,\\score risk};
+  \draw[dep] (t6) -- node[dlbl, above] {\guillemotleft include\guillemotright} (c1);
+  % ---------------------------------------------------------------- system boundary
   \begin{scope}[on background layer]
-    \node[draw=pInk, thick, fill=pDataL, rounded corners=2pt, fit=(s1)(t1)(s5)(t5)(c1), inner xsep=8pt,
+    \node[draw=pInk, thick, fill=pDataL, rounded corners=2pt, fit=(s1)(i1)(t8)(c1), inner xsep=8pt,
       inner ysep=14pt, label={[anchor=north, font=\footnotesize\bfseries, yshift=-2pt]north:Adaptive learning platform}] (sys) {};
+    \draw[pLine, thick, dashed] ([xshift=2mm]sys.west |- 0,{-8*\dy-0.35}) -- ([xshift=-2mm]sys.east |- 0,{-8*\dy-0.35});
   \end{scope}
   % ---------------------------------------------------------------- actors
-  \actor{stu}{-3.4, 2.2}{Student}
-  \actor{tea}{11.6, 2.2}{Teacher}
-  \actor{mdl}{11.6,-2.2}{\guillemotleft system\guillemotright\\Moodle}
-  \actor{llm}{11.6, 5.6}{\guillemotleft system\guillemotright\\LLM provider}
-  \actor{sch}{-3.4,-2.0}{\guillemotleft system\guillemotright\\Scheduler}
-  % associations
-  \foreach \u in {s1,s2,s3,s4,s5} \draw[assoc] (stu-c) ++(0.3,0) -- (\u.west);
-  \foreach \u in {t1,t2,t3,t4,t5} \draw[assoc] (tea-c) ++(-0.3,0) -- (\u.east);
-  \draw[assoc] (sch-c) ++(0.3,0) -- (c1.west);
-  \draw[assoc] (llm-c) ++(-0.3,0) -- (t1.north east);
-  \draw[assoc] (mdl-c) ++(-0.3,0) -- (c1.east);
-  % includes
-  \draw[dep] (s2) -- node[dlbl, above] {\guillemotleft include\guillemotright} (i1);
-  \draw[dep] (s3) -- node[dlbl, above] {\guillemotleft include\guillemotright} (i2);
-  \node[note, anchor=north west, text=pInk, text width=80mm] at ([yshift=-3mm]sys.south west)
-    {Secondary actors: Moodle provides course data and files (read-only, through the API) to reading, indexing and the context sync; the LLM provider computes embeddings and writes answers, quiz items and material drafts; the Scheduler starts the periodic context sync. One line per secondary actor is drawn for readability.};
+  \actor{stu}{-3.6,{-3.5*\dy}}{Student}
+  \actor{tea}{-3.6,{\ty-3.5*\dy}}{Teacher}
+  \actor{mdl}{9.4,{-4.3*\dy}}{\guillemotleft system\guillemotright\\Moodle}
+  \actor{llm}{9.4,{-1.7*\dy}}{\guillemotleft system\guillemotright\\LLM provider}
+  \actor{sch}{9.4,{\ty-5*\dy}}{\guillemotleft system\guillemotright\\Scheduler}
+  \foreach \u in {s1,s2,s3,s4,s5,s6,s7,s8} \draw[assoc] (stu-c) ++(0.3,0) -- (\u.west);
+  \foreach \u in {t1,t2,t3,t4,t5,t6,t7,t8} \draw[assoc] (tea-c) ++(0.3,0) -- (\u.west);
+  \draw[assoc] (mdl-c) ++(-0.3,0) -- (i3.east);
+  \draw[assoc] (llm-c) ++(-0.3,0) -- (i1.east);
+  \draw[assoc] (sch-c) ++(-0.3,0) -- (c1.east);
+  \node[note, anchor=north west, text=pInk, text width=118mm] at ([yshift=-3mm]sys.south west)
+    {Moodle also launches the platform (LTI 1.3) and provides course data and files (through the API) to reading, indexing and the
+     context sync; the LLM provider also writes quiz items and material drafts. One line per
+     secondary actor is drawn for readability.};
 \end{tikzpicture}
 \end{document}

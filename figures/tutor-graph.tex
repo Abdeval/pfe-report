@@ -15,7 +15,7 @@
   \node[code] (ret) at (0,-3.5) {\texttt{retrieve}\\hybrid search, top 6};
   \node[decision, draw=pApi, fill=pApiL, minimum width=22mm] (gate) at (0,-5.5) {gate};
   \node[code] (sq)  at (-4.0,-7.5) {\texttt{suggest\_quiz}\\propose a quiz};
-  \node[code] (ad)  at (0,-7.5) {\texttt{adapt}\\mastery $\to$ level,\\context hint};
+  \node[code] (ad)  at (0,-7.5) {\texttt{adapt}\\mastery $\to$ level,\\style (bandit), context};
   \node[code] (nf)  at (4.0,-7.5) {\texttt{not\_found}\\closest sections};
   \node[llm] (gen) at (0,-9.5) {\texttt{generate}\\cited answer or hints};
   \node[term] (end) at (0,-11.4) {END};
@@ -33,7 +33,7 @@
   \draw[call] (sq.south) |- ([yshift=-2mm]end.west);
   \draw[call] (nf.south) |- (end.east);
   % ---------------------------------------------------------------- side panel
-  \node[note, anchor=north west, text width=48mm, font=\scriptsize, text=pInk] (panel) at (6.6,-0.9)
+  \node[note, anchor=north west, text width=72mm, font=\scriptsize, text=pInk] (panel) at (-5.6,-12.3)
    {\textbf{Agent steps streamed to the chat}\\(SSE \texttt{step} events)\\[2mm]
     Each node emits \emph{running}, then \emph{done} with its details and duration.
     Example (\mbox{ADR-0008}):\\[1.5mm]
@@ -46,7 +46,7 @@
     \end{tabular}\\[2mm]
     The steps come from the graph's own spans (\texttt{agent\_event}), never from the
     model's chain of thought. They are stored with the answer (\texttt{message.steps}).};
-  \node[note, anchor=north west, font=\scriptsize, text=pInk, text width=48mm] at ([yshift=-4mm]panel.south west)
+  \node[note, anchor=north west, font=\scriptsize, text=pInk, text width=36mm] at ([xshift=4mm]panel.north east)
    {\tikz[baseline=(b.base)]\node[api, minimum width=7mm, minimum height=3.5mm, inner ysep=1pt, font=\scriptsize] (b) {\strut};\ \ decision taken in code\\[1.5mm]
     \tikz[baseline=(b.base)]\node[ai, minimum width=7mm, minimum height=3.5mm, inner ysep=1pt, font=\scriptsize] (b) {\strut};\ \ text written by the LLM};
 \end{tikzpicture}
