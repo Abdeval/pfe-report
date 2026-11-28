@@ -1,64 +1,73 @@
 \documentclass[tikz,border=4pt]{standalone}
 \input{pfe-style}
+% Core relational schema (sprints 0-7), four columns read top to bottom.
+% The tables added in sprints 8-12 are in database-ext.tex.
 \begin{document}
 \begin{tikzpicture}[
   tb/.style={table=#1, text width=31mm},
   fk/.style={draw=pMuted, thick, -{Stealth[length=1.8mm]}},
   grp/.style 2 args={draw=#1, fill=#1!4, rounded corners=5pt, thick, dashed, inner xsep=5pt, inner ysep=12pt,
-    label={[anchor=north west, font=\scriptsize\bfseries, text=#1, xshift=2pt, yshift=-1pt]north west:#2}}]
+    label={[anchor=north west, font=\scriptsize\bfseries, text=#1, xshift=2pt, yshift=-1pt]north west:#2}},
+  vg/.style={below=6mm of #1}]
   \newcommand{\tbh}[1]{\textcolor{white}{\scriptsize\bfseries #1}}
-  % ================================================================ identity
-  \node[tb=pData] (user) at (0,0) {\tbh{app\_user}\nodepart{second}\pk{id}\\moodle\_user\_id\\username, display\_name\\role, locale};
-  \node[tb=pData, below=6mm of user] (course) {\tbh{course}\nodepart{second}\pk{id}\\moodle\_course\_id\\shortname, fullname};
-  \node[tb=pData, below=6mm of course] (enr) {\tbh{enrolment}\nodepart{second}\fk{user\_id}, \fk{course\_id}\\role\\last\_access\_at};
-  % ================================================================ content / RAG
-  \node[tb=pApi] (job) at (4.2,0) {\tbh{ingestion\_job}\nodepart{second}\pk{id}\\\fk{course\_id}\\status, stats};
-  \node[tb=pApi, below=6mm of job] (doc) {\tbh{course\_document}\nodepart{second}\pk{id}, \fk{course\_id}\\moodle\_cmid, section\_num\\module\_name, lang\\content\_hash};
-  \node[tb=pApi, below=6mm of doc] (chunk) {\tbh{course\_chunk}\nodepart{second}\pk{id}, \fk{document\_id}\\content\\embedding vector(1024)\\tsv (full-text), metadata};
-  % ================================================================ learner state
-  \node[tb=pAgent] (prof) at (8.4,0) {\tbh{learner\_profile}\nodepart{second}\pk{id}, \fk{user\_id}\\preferred language\dots\\version};
-  \node[tb=pAgent, below=6mm of prof] (lcs) {\tbh{learner\_course\_state}\nodepart{second}\fk{user\_id}, \fk{course\_id}\\mastery jsonb\\misconceptions jsonb\\interaction\_stats jsonb\\context jsonb\\\textbf{version}};
-  \node[tb=pAgent, below=6mm of lcs] (av) {\tbh{activity\_view}\nodepart{second}\fk{user\_id}, \fk{course\_id}\\cmid, views, seconds};
-  % ================================================================ context
-  \node[tb=pLms] (cctx) at (12.6,0) {\tbh{course\_context}\nodepart{second}\fk{course\_id}\\context jsonb\\version};
-  \node[tb=pLms, below=6mm of cctx] (iv) {\tbh{intervention}\nodepart{second}\pk{id}\\\fk{user\_id}, \fk{course\_id}\\trigger, dedupe\_key\\reason, action, status};
-  % ================================================================ chat & tracing
-  \node[tb=pWeb] (sess) at (16.8,0) {\tbh{learning\_session}\nodepart{second}\pk{id}\\\fk{user\_id}, \fk{course\_id}};
-  \node[tb=pWeb, below=6mm of sess] (msg) {\tbh{message}\nodepart{second}\pk{id}, \fk{session\_id}\\content, citations jsonb\\intent, steps jsonb\\trace\_id};
-  \node[tb=pWeb, below=6mm of msg] (snap) {\tbh{context\_snapshot}\nodepart{second}\fk{session\_id}\\state jsonb (per turn)\\version};
-  \node[tb=pWeb, below=6mm of snap] (ev) {\tbh{agent\_event}\nodepart{second}\pk{id}, trace\_id\\agent, kind\\payload, latency\_ms};
-  % ================================================================ assessment
-  \node[tb=pOk] (quiz) at (4.2,-8.6) {\tbh{quiz}\nodepart{second}\pk{id}\\\fk{user\_id}, \fk{course\_id}\\topic\_key, lang, status};
-  \node[tb=pOk, right=6mm of quiz] (qi) {\tbh{quiz\_item}\nodepart{second}\pk{id}, \fk{quiz\_id}\\stem, options jsonb\\answer\_index\\\fk{question\_id}};
-  \node[tb=pOk, right=6mm of qi] (qr) {\tbh{quiz\_response}\nodepart{second}\fk{quiz\_item\_id}\\chosen\_index, correct\\p\_known\_before\\p\_known\_after};
-  % ================================================================ teacher
-  \node[tb=pAi, right=10mm of qr] (q) {\tbh{question}\nodepart{second}\pk{id}, \fk{course\_id}\\status (pending, approved,\\ \ rejected)\\options, answer\_index\\reviewer};
-  \node[tb=pAi, right=6mm of q] (pol) {\tbh{course\_policy}\nodepart{second}\fk{course\_id}\\review\_mode\\objectives jsonb\\version};
-  \node[tb=pAi, below=6mm of pol] (ms) {\tbh{material\_suggestion}\nodepart{second}\pk{id}, \fk{course\_id}\\kind, evidence jsonb\\diagnosis, draft\\status (pending, accepted,\\ \ rejected, applied)};
-  % ================================================================ groups
+  \def\cA{0} \def\cB{4.15} \def\cC{8.3} \def\cD{12.45} \def\rB{-9.1}
+  % ============================================================ band 1
+  \node[tb=pData, anchor=north] (user) at (\cA,0) {\tbh{app\_user}\nodepart{second}\pk{id}\\moodle\_user\_id\\username, display\_name\\role, locale};
+  \node[tb=pData, vg=user] (course) {\tbh{course}\nodepart{second}\pk{id}\\moodle\_course\_id\\shortname, fullname};
+  \node[tb=pData, vg=course] (enr) {\tbh{enrolment}\nodepart{second}\fk{user\_id}, \fk{course\_id}\\role\\last\_access\_at};
+
+  \node[tb=pApi, anchor=north] (job) at (\cB,0) {\tbh{ingestion\_job}\nodepart{second}\pk{id}\\\fk{course\_id}\\status, stats};
+  \node[tb=pApi, vg=job] (doc) {\tbh{course\_document}\nodepart{second}\pk{id}, \fk{course\_id}\\moodle\_cmid, section\_num\\module\_name, lang\\content\_hash};
+  \node[tb=pApi, vg=doc] (chunk) {\tbh{course\_chunk}\nodepart{second}\pk{id}, \fk{document\_id}\\content\\embedding vector(1024)\\tsv (full-text), metadata};
+
+  \node[tb=pAgent, anchor=north] (prof) at (\cC,0) {\tbh{learner\_profile}\nodepart{second}\pk{id}, \fk{user\_id}\\preferred language\dots\\version};
+  \node[tb=pAgent, vg=prof] (lcs) {\tbh{learner\_course\_state}\nodepart{second}\fk{user\_id}, \fk{course\_id}\\mastery jsonb\\misconceptions jsonb\\interaction\_stats jsonb\\context jsonb\\personalisation jsonb\\\textbf{version}};
+  \node[tb=pAgent, vg=lcs] (av) {\tbh{activity\_view}\nodepart{second}\fk{user\_id}, \fk{course\_id}\\cmid, views, seconds};
+
+  \node[tb=pWeb, anchor=north] (sess) at (\cD,0) {\tbh{learning\_session}\nodepart{second}\pk{id}\\\fk{user\_id}, \fk{course\_id}};
+  \node[tb=pWeb, vg=sess] (msg) {\tbh{message}\nodepart{second}\pk{id}, \fk{session\_id}\\content, citations jsonb\\intent, steps jsonb\\style, trace\_id};
+  \node[tb=pWeb, vg=msg] (snap) {\tbh{context\_snapshot}\nodepart{second}\fk{session\_id}\\state jsonb (per turn)\\version};
+  \node[tb=pWeb, vg=snap] (ev) {\tbh{agent\_event}\nodepart{second}\pk{id}, trace\_id\\agent, kind\\payload, latency\_ms};
+
+  % ============================================================ band 2
+  \node[tb=pLms, anchor=north] (cctx) at (\cA,\rB) {\tbh{course\_context}\nodepart{second}\fk{course\_id}\\context jsonb\\version};
+  \node[tb=pLms, vg=cctx] (iv) {\tbh{intervention}\nodepart{second}\pk{id}\\\fk{user\_id}, \fk{course\_id}\\trigger, dedupe\_key\\reason, action, status};
+
+  \node[tb=pOk, anchor=north] (quiz) at (\cB,\rB) {\tbh{quiz}\nodepart{second}\pk{id}\\\fk{user\_id}, \fk{course\_id}\\topic\_key, lang, status};
+  \node[tb=pOk, vg=quiz] (qi) {\tbh{quiz\_item}\nodepart{second}\pk{id}, \fk{quiz\_id}\\stem, options jsonb\\answer\_index\\\fk{question\_id}};
+  \node[tb=pOk, vg=qi] (qr) {\tbh{quiz\_response}\nodepart{second}\fk{quiz\_item\_id}\\chosen\_index, correct\\p\_known\_before\\p\_known\_after};
+
+  \node[tb=pAi, anchor=north] (q) at (\cC,\rB) {\tbh{question}\nodepart{second}\pk{id}, \fk{course\_id}\\status (pending, approved,\\ \ rejected)\\options, answer\_index\\reviewer};
+  \node[tb=pAi, vg=q] (pol) {\tbh{course\_policy}\nodepart{second}\fk{course\_id}\\review\_mode\\objectives jsonb\\version};
+  \node[tb=pAi, vg=pol] (ms) {\tbh{material\_suggestion}\nodepart{second}\pk{id}, \fk{course\_id}\\kind, evidence jsonb\\diagnosis, draft\\status (pending, accepted,\\ \ rejected, applied)};
+
+  % ============================================================ groups
   \begin{scope}[on background layer]
     \node[grp={pData}{Identity}, fit=(user)(enr)] {};
     \node[grp={pApi}{Content / RAG}, fit=(job)(chunk)] {};
     \node[grp={pAgent}{Learner state}, fit=(prof)(av)] {};
-    \node[grp={pLms}{Context}, fit=(cctx)(iv)] {};
     \node[grp={pWeb}{Chat \& tracing}, fit=(sess)(ev)] {};
+    \node[grp={pLms}{Context}, fit=(cctx)(iv)] {};
     \node[grp={pOk}{Assessment}, fit=(quiz)(qr)] {};
-    \node[grp={pAi}{Teacher}, fit=(q)(pol)(ms)] {};
+    \node[grp={pAi}{Teacher}, fit=(q)(ms)] {};
   \end{scope}
-  % ================================================================ foreign keys inside the groups
+
+  % ============================================================ foreign keys inside the groups
   \draw[fk] (chunk.north) -- (doc.south);
+  \draw[fk] (doc.north) -- (job.south);
   \draw[fk] (msg.north) -- (sess.south);
-  \draw[fk] (snap.east) -- ++(0.35,0) |- (sess.east);
-  \draw[fk] (qi.west) -- (quiz.east);
-  \draw[fk] (qr.west) -- (qi.east);
-  \draw[fk] (qi.south) -- ++(0,-0.45) -| (q.south);
+  \draw[fk] (snap.east) -- ++(0.3,0) |- (sess.east);
+  \draw[fk] (qi.north) -- (quiz.south);
+  \draw[fk] (qr.north) -- (qi.south);
+  \draw[fk] (qi.east) -- ++(0.45,0) |- (q.west);
   \draw[fk] (enr.north) -- (course.south);
   \draw[fk] (enr.west) -- ++(-0.3,0) |- (user.west);
-  % legend
-  \node[note, anchor=north west, text=pInk, text width=33mm] at (-1.75,-6.2)
-    {\pk{id} primary key \quad \fk{column} foreign key\\[1mm]
-     Every \textit{user\_id} references \texttt{app\_user} and every \textit{course\_id} references
-     \texttt{course}; these arrows are omitted for readability. \texttt{agent\_event} is linked to
-     \texttt{message} by \texttt{trace\_id}.};
+
+  % ============================================================ legend
+  \node[note, anchor=north west, text=pInk, text width=31mm] at ([xshift=-1.65cm]\cD,\rB)
+    {\pk{id} primary key\\\fk{column} foreign key\\[1mm]
+     Every \textit{user\_id} references \texttt{app\_user} and every \textit{course\_id}
+     references \texttt{course}; these arrows are omitted for readability.
+     \texttt{agent\_event} is linked to \texttt{message} by \texttt{trace\_id}.};
 \end{tikzpicture}
 \end{document}

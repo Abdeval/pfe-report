@@ -1,0 +1,54 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+% Classes added in sprints 8-12, around the core classes they refer to
+% (shown in grey): personalization, study (pilot), LTI and early warning.
+\begin{document}
+\begin{tikzpicture}[
+  cls/.style={umlclass=38mm},
+  ref/.style={rectangle, rounded corners=2pt, draw=pMuted, fill=white, thick, font=\scriptsize\bfseries,
+    text=pMuted, minimum width=38mm, minimum height=6mm},
+  as/.style={draw=pInk, thick},
+  comp/.style={draw=pInk, thick, -{Diamond[open=false, length=2.6mm, width=1.8mm]}},
+  m/.style={font=\scriptsize, inner sep=1pt, fill=white},
+  pk/.style 2 args={draw=#1, fill=#1!4, rounded corners=5pt, dashed, thick, inner xsep=6pt, inner ysep=13pt,
+    label={[anchor=south west, font=\scriptsize\bfseries, text=#1, xshift=2pt, yshift=1pt]south west:#2}}]
+  \def\cA{0} \def\cB{4.9} \def\cC{9.8}
+  % ======================================================= core classes (reference)
+  \node[ref] (user) at (\cA,0) {User};
+  \node[ref] (course) at (\cB,0) {Course};
+    \node[ref] (lcs) at (\cC,0) {LearnerCourseState};
+  % ======================================================= personalization
+  \node[cls] (pers) at (\cC,-3.1) {\textbf{Personalization}\nodepart{second}goal: pass \textbar\ master\_key\\ \ \textbar\ exam \textbar\ sections\\level, preferred\_style\\style posteriors (Beta)\nodepart{third}};
+  \node[cls] (fb) at (\cC,-6.2) {\textbf{MessageFeedback}\nodepart{second}message, user\\rating: up \textbar\ down\\reason\nodepart{third}};
+  \node[cls] (ov) at (\cC,-8.6) {\textbf{RecommendationOverride}\nodepart{second}topic\_key\\action: pin \textbar\ skip\\course, note\\user (or whole class)\nodepart{third}};
+  % ======================================================= study (pilot)
+  \node[cls] (sc) at (\cA,-3.1) {\textbf{StudyCondition}\nodepart{second}arm: full \textbar\ baseline\\pseudonym\nodepart{third}};
+  \node[cls] (cons) at (\cA,-5.6) {\textbf{StudyConsent}\nodepart{second}consented\\withdrawn\_at\nodepart{third}};
+  \node[cls] (kt) at (\cB,-3.1) {\textbf{KnowledgeTest}\nodepart{second}phase: pre \textbar\ post\\items (copied)\nodepart{third}};
+  \node[cls] (kta) at (\cB,-5.6) {\textbf{KnowledgeTestAttempt}\nodepart{second}answers\\correct, total\nodepart{third}};
+  \node[cls] (sus) at (\cA,-8.1) {\textbf{SusResponse}\nodepart{second}answers (10 items)\\score (0--100)\nodepart{third}};
+  % ======================================================= LTI
+  \node[cls] (dep) at (\cA,-11.6) {\textbf{LtiDeployment}\nodepart{second}issuer, client\_id\\deployment\_id\nodepart{third}};
+  \node[cls] (link) at (\cB,-11.6) {\textbf{LtiResourceLink}\nodepart{second}course, resource\_link\_id\\lineitem\_url, title\nodepart{third}};
+  % ======================================================= early warning
+  \node[cls] (rs) at (\cA,-15.0) {\textbf{RiskSnapshot}\nodepart{second}user, course, day\\score, level\\features, reasons\\model\_version\nodepart{third}};
+  \node[cls] (rf) at (\cB,-15.0) {\textbf{RiskFollowup}\nodepart{second}kind: nudge \textbar\ handled\\ \ \textbar\ dismissed\\message, score, reasons\nodepart{third}};
+  \node[ref] (iv) at (\cC,-15.0) {Intervention};
+  % ======================================================= packages
+  \begin{scope}[on background layer]
+    \node[pk={pData}{core classes (domain model)}, fit=(user)(lcs)] {};
+    \node[pk={pAgent}{personalization}, fit=(pers)(ov)] {};
+    \node[pk={pOk}{study (pilot)}, fit=(sc)(kta)(sus)] {};
+    \node[pk={pLms}{LTI}, fit=(dep)(link)] {};
+    \node[pk={pAi}{early warning}, fit=(rs)(rf)] {};
+  \end{scope}
+  % ======================================================= associations
+  \draw[comp] (pers) -- node[m, right, pos=0.2] {1} (lcs);
+  \draw[comp] (cons) -- node[m, right, pos=0.2] {0..1} (sc);
+  \draw[as] (sc.north) -- node[m, right, pos=0.2] {*} node[m, right, pos=0.8] {1} (user.south);
+  \draw[as] (kt.north) -- node[m, right, pos=0.2] {*} node[m, right, pos=0.8] {1} (course.south);
+  \draw[comp] (kta) -- node[m, right, pos=0.2] {*} (kt);
+  \draw[comp] (link) -- node[m, above, pos=0.2] {*} (dep);
+  \draw[as] (rf) -- node[m, above, pos=0.2] {*} node[m, above, pos=0.8] {0..1} node[m, below=2pt, pos=0.5] {nudge} (iv);
+\end{tikzpicture}
+\end{document}

@@ -1,89 +1,94 @@
 \documentclass[tikz,border=4pt]{standalone}
 \input{pfe-style}
+% Layered architecture, read top to bottom: users and Moodle, presentation,
+% gateway, agents, then data and model providers. Three columns of 44 mm.
 \begin{document}
-\begin{tikzpicture}[node distance=4mm and 4mm]
-  % ---------------------------------------------------------------- users
-  \actor{student}{5.2,0.2}{Student}
-  \actor{teacher}{9.6,0.2}{Teacher}
+\begin{tikzpicture}[
+  cell/.style={minimum width=42mm, text width=40mm, minimum height=10mm},
+  wcell/.style={web, minimum width=31mm, text width=29mm, minimum height=10mm}]
+  \def\cA{2.4}\def\cB{7.2}\def\cC{12.0}
 
-  % ---------------------------------------------------------------- presentation
-  \node[web, minimum width=28mm] (w1) at (1.9,-2.1) {Course reader\\[-1pt]\scriptsize Moodle pages \& files};
-  \node[web, minimum width=28mm, right=of w1] (w2) {Tutor chat\\[-1pt]\scriptsize live agent steps (SSE)};
-  \node[web, minimum width=28mm, right=of w2] (w3) {Adaptive quizzes\\[-1pt]\scriptsize progress \& suggestions};
-  \node[web, minimum width=28mm, right=of w3] (w4) {Teacher pages\\[-1pt]\scriptsize class, bank, material};
+  % ------------------------------------------------------ users and LMS
+  \actor{student}{\cA,0.1}{Student}
+  \actor{teacher}{\cB,0.1}{Teacher}
+  \node[lms, cell, minimum height=13mm] (moodle) at (\cC,0.25)
+    {\textbf{Moodle 4.5 LTS}\\[-1pt]\scriptsize LMS backend, core never modified};
 
-  % ---------------------------------------------------------------- gateway
-  \node[api, minimum width=22mm] (g1) at (1.4,-5.0) {Auth (JWT)\\[-1pt]\scriptsize users, enrolments};
-  \node[api, minimum width=22mm, right=3mm of g1] (g2) {Course reader\\[-1pt]\scriptsize signed file links};
-  \node[api, minimum width=22mm, right=3mm of g2] (g3) {Chat sessions\\[-1pt]\scriptsize SSE proxy};
-  \node[api, minimum width=22mm, right=3mm of g3] (g4) {Quizzes \&\\[-1pt]teacher routes};
-  \node[api, minimum width=22mm, right=3mm of g4, very thick] (g5) {Moodle client\\[-1pt]\scriptsize the only one};
+  % ------------------------------------------------------- presentation
+  \node[wcell] (w1) at (1.85,-2.45) {Student pages\\[-1pt]\scriptsize overview, path, reader};
+  \node[wcell, right=2.5mm of w1] (w2) {Tutor chat\\[-1pt]\scriptsize live agent steps};
+  \node[wcell, right=2.5mm of w2] (w3) {Quizzes \& progress\\[-1pt]\scriptsize mastery, deadlines};
+  \node[wcell, right=2.5mm of w3] (w4) {Teacher pages\\[-1pt]\scriptsize class, warnings, bank};
 
-  % ---------------------------------------------------------------- agents
-  \node[agent, minimum width=30mm] (a1) at (2.05,-8.0) {Orchestrator};
-  \node[agent, minimum width=30mm, right=3mm of a1] (a2) {Tutor (RAG)};
-  \node[agent, minimum width=30mm, right=3mm of a2] (a3) {Assessment};
-  \node[agent, minimum width=30mm, right=3mm of a3] (a4) {Diagnosis (BKT)};
-  \node[agent, minimum width=30mm, below=3mm of a1] (a5) {Recommendation};
-  \node[agent, minimum width=30mm, below=3mm of a2] (a6) {Context};
-  \node[agent, minimum width=30mm, below=3mm of a3] (a7) {Learning Analytics};
-  \node[agent, minimum width=30mm, below=3mm of a4] (a8) {Material Improvement};
-  \node[agent, fill=pAgent!14, font=\small\bfseries, minimum height=7mm,
-        below=4mm of a5.south west, anchor=north west, minimum width=129mm] (ss)
-        {StateStore: one shared, versioned learner + context state \quad$\cdot$\quad Tracer (agent\_event)};
-  \node[agent, minimum width=24mm, right=7mm of a4, yshift=-5.5mm, align=center] (wk)
-        {Worker\\[-1pt]\scriptsize BullMQ consumer\\[-1pt]\scriptsize ingestion, context sync};
+  % ------------------------------------------------------------ gateway
+  \node[api, cell] (g1) at (\cA,-5.25) {Auth \& LTI 1.3\\[-1pt]\scriptsize launch, JWT, AGS grades};
+  \node[api, cell] (g2) at (\cB,-5.25) {Course reader\\[-1pt]\scriptsize sanitized pages, signed links};
+  \node[api, cell] (g3) at (\cC,-5.25) {Chat sessions\\[-1pt]\scriptsize SSE proxy};
+  \node[api, cell] (g4) at (\cA,-6.5) {Quizzes, personalization\\[-1pt]\scriptsize context feed};
+  \node[api, cell] (g5) at (\cB,-6.5) {Teaching \& study\\[-1pt]\scriptsize class, bank, pilot};
+  \node[api, cell, very thick] (g6) at (\cC,-6.5) {Moodle client\\[-1pt]\scriptsize the only one};
 
-  % ---------------------------------------------------------------- data
-  \node[store, minimum width=46mm] (pg) at (5.6,-13.6)
-        {PostgreSQL 16 + pgvector\\[-1pt]\scriptsize app data $\cdot$ learner state $\cdot$ embeddings $\cdot$ traces};
-  \node[store, minimum width=30mm] (rd) at (wk |- pg) {Redis 7\\[-1pt]\scriptsize BullMQ queues};
+  % ------------------------------------------------------------- agents
+  \node[agent, cell] (a1) at (\cA,-9.4) {Orchestrator};
+  \node[agent, cell] (a2) at (\cB,-9.4) {Tutor (RAG)};
+  \node[agent, cell] (a3) at (\cC,-9.4) {Assessment};
+  \node[agent, cell] (a4) at (\cA,-10.65) {Diagnosis (BKT)};
+  \node[agent, cell] (a5) at (\cB,-10.65) {Recommendation};
+  \node[agent, cell] (a6) at (\cC,-10.65) {Context};
+  \node[agent, cell] (a7) at (\cA,-11.9) {Learning Analytics\\[-1pt]\scriptsize dashboard, early warning};
+  \node[agent, cell] (a8) at (\cB,-11.9) {Material Improvement};
+  \node[agent, cell] (a9) at (\cC,-11.9) {Personalization\\[-1pt]\scriptsize goals, style bandit};
+  \node[agent, cell, minimum height=11mm] (wk) at (\cA,-13.25)
+    {Worker\\[-1pt]\scriptsize BullMQ: ingestion, context sync};
+  \node[agent, fill=pAgent!14, font=\small\bfseries, minimum height=11mm,
+        minimum width=90mm, text width=88mm] (ss) at ($(\cB,-13.25)!0.5!(\cC,-13.25)$)
+    {StateStore: one shared, versioned learner + context state\\[-1pt]
+     \mdseries\scriptsize Tracer: every decision in agent\_event};
 
-  % ---------------------------------------------------------------- external
-  \node[lms, minimum width=30mm, minimum height=14mm] (moodle) at (22.2,-5.0)
-        {\textbf{Moodle 4.5 LTS}\\[-1pt]\scriptsize LMS backend\\[-1pt]\scriptsize core never modified};
-  \node[ai, minimum width=30mm] (llm) at (22.2,-8.0)
-        {\textbf{Chat LLM}\\[-1pt]\scriptsize Groq (hosted) or\\[-1pt]\scriptsize Ollama (local)};
-  \node[ai, minimum width=30mm, below=4mm of llm] (emb)
-        {\textbf{Embeddings}\\[-1pt]\scriptsize bge-m3 (Ollama)};
+  % ---------------------------------------------- data and model providers
+  \node[store, minimum width=34mm] (rd) at (\cA,-16.6) {Redis 7\\[-1pt]\scriptsize BullMQ queues};
+  \node[store, minimum width=40mm] (pg) at (\cB,-16.6)
+    {PostgreSQL 16\\+ pgvector\\[-1pt]\scriptsize data, state, vectors, traces};
+  \node[ai, cell] (llm) at (\cC,-16.0) {\textbf{Chat LLM}\\[-1pt]\scriptsize Groq or Ollama (local)};
+  \node[ai, cell] (emb) at (\cC,-17.25) {\textbf{Embeddings}\\[-1pt]\scriptsize bge-m3 (Ollama)};
 
-  % ---------------------------------------------------------------- layers
+  % ------------------------------------------------------------- layers
   \begin{scope}[on background layer]
-    \node[layer={pWeb}{Presentation \quad React 19 SPA (apps/web)}, fit=(w1)(w4), inner ysep=13pt] (Lw) {};
-    \node[layer={pApi}{Gateway \quad NestJS 12 API (apps/api)}, fit=(g1)(g5), inner ysep=13pt] (Lg) {};
+    \node[layer={pWeb}{Presentation \quad React 19 (apps/web)}, fit=(w1)(w4)] (Lw) {};
+    \node[layer={pApi}{Gateway \quad NestJS 12 (apps/api)}, fit=(g1)(g6)] (Lg) {};
     \node[layer={pAgent}{Agents \quad Python 3.12, FastAPI, LangGraph (apps/agents)},
-          fit=(a1)(a8)(ss)(wk), inner ysep=13pt] (La) {};
-    \node[layer={pData}{Data}, fit=(pg)(rd), inner ysep=13pt, inner xsep=14pt] (Ld) {};
-    \node[layer={pLms}{External services}, fit=(moodle)(emb), inner ysep=13pt] (Lx) {};
+          fit=(a1)(a9)(wk)(ss)] (La) {};
+    \node[layer={pData}{Data}, fit=(rd)(pg)] (Ld) {};
+    \node[layer={pAi}{Model providers}, fit=(llm)(emb)] (Lm) {};
   \end{scope}
 
-  % ---------------------------------------------------------------- flows
-  % Vertical flows use the x of a node, so every arrow between layers is straight.
-  \draw[call] (student) -- node[lblc, left, pos=0.3] {HTTPS} (student |- Lw.north);
+  % -------------------------------------------------------------- flows
+  \draw[call] (student) -- node[lblc, left, pos=0.35] {HTTPS} (student |- Lw.north);
   \draw[call] (teacher) -- (teacher |- Lw.north);
-  \draw[call] (Lw.south -| w2) ++(-6mm,0) coordinate (x1) -- node[lblc, left] {REST (JSON) + SSE}
-        (x1 |- Lg.north);
-  \draw[stream] (Lg.north -| w2) ++(6mm,0) coordinate (x2) -- node[lblc, right] {token \& step stream}
-        (x2 |- Lw.south);
-  \draw[call] (Lg.south -| g3) ++(-6mm,0) coordinate (x3) -- node[lblc, left] {internal HTTP + SSE (shared token)}
-        (x3 |- La.north);
-  \draw[call] (La.north -| g4) coordinate (x4) -- node[lblc, right] {Moodle data \& files (internal endpoints)}
-        (x4 |- Lg.south);
-  \draw[call] (g5) -- node[lbl] {REST web services\\token, read-only} (moodle);
-  \draw[call] (La.east |- llm) -- node[lbl, above=1pt, pos=0.72] {prompts} (llm.west);
-  \draw[call] (La.east |- emb) -- node[lbl, above=1pt, pos=0.72] {texts} (emb.west);
-  % Jobs: around the agents layer, on its right.
-  \draw[async] ([yshift=-3mm]Lg.east) -- ([yshift=-3mm]Lg.east -| La.east) -- ++(0.6,0)
-        |- node[lblc, right, pos=0.45] {jobs} (rd.east);
-  \draw[async] (rd.north) -- node[lblc, left, pos=0.25] {consume} (wk.south);
+  \draw[call] ([xshift=-6mm]Lw.south -| \cB,0) -- node[lblc, left] {REST (JSON)}
+        ([xshift=-6mm]Lg.north -| \cB,0);
+  \draw[stream] ([xshift=6mm]Lg.north -| \cB,0) -- node[lblc, right] {SSE stream}
+        ([xshift=6mm]Lw.south -| \cB,0);
+  \draw[call] ([xshift=-6mm]Lg.south -| \cB,0) -- node[lblc, left] {internal HTTP + SSE}
+        ([xshift=-6mm]La.north -| \cB,0);
+  \draw[call] ([xshift=6mm]La.north -| \cB,0) -- node[lblc, right] {Moodle data (internal)}
+        ([xshift=6mm]Lg.south -| \cB,0);
+  % Moodle <-> its only client, along the right edge
+  \draw[call, <->] (moodle.east) -- ++(0.75,0) coordinate (m1)
+        |- node[lbl, pos=0.43, align=center] {REST web services\\LTI 1.3 launch\\AGS grades} (g6.east);
+  % jobs and the gateway's own tables, along the left edge
+  \draw[async] (Lg.west) ++(0,0.3) -- ++(-0.55,0) |- node[lblc, above, pos=0.75] {jobs} (rd.west);
+  \draw[rw] (Lg.west) ++(0,-0.3) -- ++(-1.0,0) |- node[lblc, pos=0.27, left] {SQL (Kysely)}
+        ([yshift=-0.55cm]Ld.south -| pg) -- ([yshift=-0.05cm]pg.south);
+  \draw[async] (rd.north) -- node[lblc, right] {consume} (wk.south);
   \draw[rw] (ss.south -| pg) -- node[lbl] {SQL (psycopg)} (pg.north);
-  % The gateway's own tables (users, sessions, views): around the agents layer, on its left.
-  \draw[rw] (Lg.west) -- ++(-0.6,0) |- node[lbl, pos=0.25] {SQL\\(Kysely)} (pg.west);
-  % Legend
-  \node[note, anchor=north east, align=left] at (Lx.south east |- Ld.north)
-    {\tikz[baseline=-0.5ex]\draw[call] (0,0) -- (0.6,0); synchronous request\\
+  \draw[call] (La.south -| \cC,0) -- node[lbl] {prompts, texts} (Lm.north -| \cC,0);
+
+  % ------------------------------------------------------------- legend
+  \node[note, anchor=north west, align=left] at ([yshift=-0.85cm]Ld.south west)
+    {\tikz[baseline=-0.5ex]\draw[call] (0,0) -- (0.6,0); synchronous request \qquad
      \tikz[baseline=-0.5ex]\draw[async] (0,0) -- (0.6,0); queued job (BullMQ)\\
-     \tikz[baseline=-0.5ex]\draw[rw] (0,0) -- (0.6,0); data read/write\\
+     \tikz[baseline=-0.5ex]\draw[rw] (0,0) -- (0.6,0); data read/write \qquad\quad\;
      \tikz[baseline=-0.5ex]\draw[stream] (0,0) -- (0.6,0); server-sent event stream};
 \end{tikzpicture}
 \end{document}

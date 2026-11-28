@@ -292,12 +292,12 @@ pgvector, for application data, the learner state, the embeddings and the
 traces, and Redis for the job queues. The \emph{external services} are
 Moodle, the chat LLM (hosted or local) and the embedding model.
 
-\begin{sidewaysfigure}
+\begin{figure}[htbp]
   \centering
-  \reportfigwide{architecture}
+  \reportfig{architecture}
   \caption{Layered architecture of the framework.}
   \label{fig-architecture}
-\end{sidewaysfigure}
+\end{figure}
 
 The gateway sits between the web app and the agents for two reasons.
 First, it is the \emph{only} Moodle client: the agents obtain Moodle data
@@ -568,12 +568,12 @@ transitions can be undone.
 \Cref{fig-class-diagram} presents the domain classes, grouped into six
 packages.
 
-\begin{sidewaysfigure}
+\begin{figure}[htbp]
   \centering
-  \reportfigwide{class-diagram}
-  \caption{Domain class diagram.}
+  \reportfig{class-diagram}
+  \caption{Domain class diagram (core).}
   \label{fig-class-diagram}
-\end{sidewaysfigure}
+\end{figure}
 
 \begin{description}[style=nextline, leftmargin=0.6cm]
   \item[Identity] \texttt{User} and \texttt{Course} mirror the Moodle user
@@ -603,8 +603,16 @@ packages.
     \texttt{Message}s; an assistant message keeps its citations, intent,
     trace identifier and its \texttt{AgentStep}s.
 \end{description}
-Four groups of classes were added in the later sprints and are not drawn
-in \cref{fig-class-diagram}:
+Four groups of classes were added in the later sprints; \cref{fig-class-diagram-ext}
+shows them around the core classes they refer to.
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{class-diagram-ext}
+  \caption{Classes added in sprints 8 to 12: personalization, study, LTI and early warning.}
+  \label{fig-class-diagram-ext}
+\end{figure}
+
 \begin{description}[style=nextline, leftmargin=0.6cm]
   \item[Personalization] The \texttt{Personalization} part of
     \texttt{LearnerCourseState} holds the goal, the level, the preferred
@@ -633,17 +641,25 @@ concurrency described in \cref{sec-c1}.
 \label{sec-d-db}
 % =====================================================================
 
-\Cref{fig-database} shows the relational schema, and \cref{tab-db-tables}
+\Cref{fig-database} shows the relational schema of the core tables, \cref{fig-database-ext}
+the tables added in sprints 8 to 12, and \cref{tab-db-tables}
 describes the role of each table. The schema is owned by SQL migrations
 applied by one tool, dbmate. The API reads it through types generated for
 Kysely, and the agents through Pydantic models that mirror the tables.
 
-\begin{sidewaysfigure}
+\begin{figure}[htbp]
   \centering
-  \reportfigwide{database}
-  \caption{Relational schema of the database.}
+  \reportfig{database}
+  \caption{Relational schema of the database (core tables).}
   \label{fig-database}
-\end{sidewaysfigure}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \reportfig{database-ext}
+  \caption{Tables added in sprints 8 to 12.}
+  \label{fig-database-ext}
+\end{figure}
 
 \begin{table}[htbp]
 \centering

@@ -1,54 +1,99 @@
 \documentclass[tikz,border=4pt]{standalone}
 \input{pfe-style}
+% From literature gaps to contributions, read top to bottom: the eight gaps,
+% four groups of contributions (each box lists the gaps it addresses), and
+% the evaluation. Box colour gives the status of each contribution.
+\newcommand{\gaps}[1]{\par\vspace{1.5pt}{\color{pLms}\bfseries\tiny #1}}
 \begin{document}
 \begin{tikzpicture}[
-  gap/.style={comp, font=\scriptsize, draw=pLms, fill=pLmsL, minimum width=56mm, text width=53mm,
-    align=left, minimum height=7.5mm},
-  con/.style={comp, font=\scriptsize, minimum width=58mm, text width=55mm, align=left, minimum height=7.5mm},
+  gap/.style={comp, draw=pLms, fill=white, font=\scriptsize, text width=64mm, align=left,
+    minimum height=7mm, inner ysep=2.5pt},
+  con/.style={comp, font=\scriptsize, text width=60mm, align=left, inner ysep=3.5pt},
   impl/.style={con, draw=pOk, fill=pOkL},
   part/.style={con, draw=pWarn, fill=pWarnL},
-  fut/.style={con, draw=pMuted, fill=white, dashed}]
-  % one colour per gap, so that each link can be followed
-  \colorlet{k1}{pWeb}\colorlet{k2}{pAgent}\colorlet{k3}{pApi}\colorlet{k4}{pLms}
-  \colorlet{k5}{pMuted}\colorlet{k6}{pAi}\colorlet{k7}{pOk}\colorlet{k8}{pWarn}
-  % gaps
-  \foreach \i/\t in {
-    1/{G1 no explicit context model},
-    2/{G2 agents cut off from knowledge tracing},
-    3/{G3 one adaptation dimension at a time},
-    4/{G4 reactive tutoring},
-    5/{G5 no evidence of learning effect},
-    6/{G6 weak teacher control},
-    7/{G7 grounding and reliability},
-    8/{G8 language, privacy, local context}} {
-    \node[gap] (g\i) at (0, -\i*1.45) {\t};
-    \fill[k\i] (g\i.east) circle (1.3pt);
-  }
-  % contributions
-  \node[impl] (c1) at (10.5,-0.55)  {C1 shared, versioned learner + context model};
-  \node[impl] (c2) at (10.5,-1.45)  {C2 Context agent};
-  \node[impl] (c3) at (10.5,-2.35)  {C3 knowledge tracing (BKT)};
-  \node[impl] (c4) at (10.5,-3.25)  {C4 specialized agents on one graph};
-  \node[impl] (c5) at (10.5,-4.15)  {C5 proactive triggers};
-  \node[impl] (c6) at (10.5,-5.05)  {C6 code decides, the LLM writes; the ``why''};
-  \node[impl] (c7) at (10.5,-5.95)  {C7 teacher in the loop};
-  \node[impl] (c8) at (10.5,-6.85)  {C8 grounding and guardrails};
-  \node[part] (c9) at (10.5,-7.75)  {C9 multilingual (FR/EN; Arabic later)};
-  \node[impl] (c10) at (10.5,-8.65) {C10 Moodle integration (LTI 1.3, grades back)};
-  \node[impl] (c11) at (10.5,-9.55) {C11 explainable personalization (goal, path, style)};
-  \node[impl] (c12) at (10.5,-10.45) {C12 early warning; the teacher decides};
-  \node[impl, very thick] (cm) at (10.5,-11.35) {Material Improvement agent};
-  \node[part] (ce) at (10.5,-12.25) {Learning-gain evaluation (simulated; pilot ready)};
-  % edges (gap -> contribution): smooth curves coloured by gap
-  \foreach \g/\c in {1/c1,2/c1,1/c2,4/c2,2/c3,3/c4,4/c5,6/c6,7/c6,6/c7,7/c8,8/c8,8/c9,3/c10,1/c11,3/c11,6/c11,4/c12,6/c12,6/cm,7/cm,5/ce}
-    \draw[k\g, thick, -{Stealth[length=1.8mm]}, opacity=0.9]
-      (g\g.east) .. controls +(2.2,0) and +(-2.2,0) .. (\c.west);
-  % headers and legend
-  \node[font=\footnotesize\bfseries, text=pLms] at (0,-0.35) {Gaps in the literature};
-  \node[font=\footnotesize\bfseries, text=pInk] at (10.5, 0.25) {Contributions of this work};
-  \node[note, anchor=north west, text=pInk] at (-2.8,-12.8)
-    {\tikz[baseline=(b.base)]\node[impl, minimum width=6mm, text width=4mm, minimum height=3mm, inner ysep=1pt] (b) {\strut};\ implemented \quad
-     \tikz[baseline=(b.base)]\node[part, minimum width=6mm, text width=4mm, minimum height=3mm, inner ysep=1pt] (b) {\strut};\ partial \quad
-     \tikz[baseline=(b.base)]\node[fut, minimum width=6mm, text width=4mm, minimum height=3mm, inner ysep=1pt] (b) {\strut};\ future work};
+  flow/.style={->, very thick, draw=pMuted},
+  vgap/.style={below=2mm of #1}]
+
+  % ---------------------------------------------------------------- gaps
+  \node[gap, anchor=north west] (g1) at (0,0)
+    {\textbf{G1}\enspace no explicit, multi-dimensional context model};
+  \node[gap, vgap=g1] (g2) {\textbf{G2}\enspace LLM agents cut off from knowledge tracing};
+  \node[gap, vgap=g2] (g3) {\textbf{G3}\enspace one adaptation dimension at a time};
+  \node[gap, vgap=g3] (g4) {\textbf{G4}\enspace reactive tutoring};
+  \node[gap, anchor=north west] (g5) at (7.7,0) {\textbf{G5}\enspace no evidence of a learning effect};
+  \node[gap, vgap=g5] (g6) {\textbf{G6}\enspace weak teacher control};
+  \node[gap, vgap=g6] (g7) {\textbf{G7}\enspace grounding and reliability across agents};
+  \node[gap, vgap=g7] (g8) {\textbf{G8}\enspace languages, privacy, local context};
+  \begin{scope}[on background layer]
+    \node[layer={pLms}{Gaps in the literature (Chapter 2)}, fit=(g1)(g4)(g5)(g8)] (G) {};
+  \end{scope}
+
+  \coordinate (top) at ($(G.south)+(0,-1.45)$);
+  \draw[flow] (G.south) -- (top) node[midway, right=2pt, lblc] {addressed by};
+
+  % ------------------------------------------------- row 1: two groups
+  \node[impl, anchor=north west] (c1) at ([xshift=3.5mm, yshift=-6mm]top -| G.west)
+    {\textbf{C1}\enspace one shared, versioned learner and context model, read and
+     written by every agent through the StateStore\gaps{G1\,$\cdot$\,G2}};
+  \node[impl, vgap=c1] (c3) {\textbf{C3}\enspace knowledge tracing (BKT) per section,
+     behind the agents\gaps{G2}};
+  \node[impl, vgap=c3] (c2) {\textbf{C2}\enspace Context agent: deadlines, activity,
+     prerequisites, inactivity\gaps{G1\,$\cdot$\,G4}};
+  \node[impl, vgap=c2] (c5) {\textbf{C5}\enspace proactive interventions from
+     rule-based triggers\gaps{G4}};
+
+  \node[impl, anchor=north west] (c4) at ([xshift=3.5mm, yshift=-6mm]top -| g5.west)
+    {\textbf{C4}\enspace specialized agents coordinated by one explicit graph\gaps{G3}};
+  \node[impl, vgap=c4] (c6) {\textbf{C6}\enspace code decides, the LLM writes;
+     agent steps and reasons visible\gaps{G6\,$\cdot$\,G7}};
+  \node[impl, vgap=c6] (c8) {\textbf{C8}\enspace grounding and guardrails: hybrid
+     retrieval, checked citations, refusal, local model\gaps{G7\,$\cdot$\,G8}};
+  \node[part, vgap=c8] (c9) {\textbf{C9}\enspace multilingual: French and English
+     (Arabic later)\gaps{G8}};
+
+  \begin{scope}[on background layer]
+    \node[layer={pWeb}{Learner and context model}, fit=(c1)(c5)(c9.south -| c1.west)] (PA) {};
+    \node[layer={pAgent}{Specialized agents}, fit=(c4)(c9)(c5.south -| c4.west)] (PB) {};
+  \end{scope}
+
+  % ------------------------------------------------- row 2: two groups
+  \coordinate (top2) at ($(PA.south)+(0,-0.45)$);
+  \node[impl, anchor=north west] (c7) at ([yshift=-6mm]top2 -| c1.west)
+    {\textbf{C7}\enspace teacher in the loop: reviewed question bank, objectives,
+     class dashboard\gaps{G6}};
+  \node[impl, vgap=c7, very thick] (cm) {\textbf{Material Improvement agent}: statistical
+     detectors, LLM drafts, the teacher validates\gaps{G6\,$\cdot$\,G7}};
+  \node[impl, vgap=cm] (c12) {\textbf{C12}\enspace early warning: predicted risk with
+     its reasons; the teacher decides\gaps{G4\,$\cdot$\,G6}};
+
+  \node[impl, anchor=north west] (c11) at ([yshift=-6mm]top2 -| c4.west)
+    {\textbf{C11}\enspace explainable personalization: goal, learning path,
+     ``why this?'', explanation style, teacher pin and skip\gaps{G1\,$\cdot$\,G3\,$\cdot$\,G6}};
+  \node[impl, vgap=c11] (c10) {\textbf{C10}\enspace Moodle integration: LTI 1.3 launch,
+     grades back, core unchanged\gaps{G3}};
+
+  \begin{scope}[on background layer]
+    \node[layer={pAi}{Teacher in control}, fit=(c7)(c12)(c10.south -| c7.west)] (PC) {};
+    \node[layer={pApi}{Personalization and integration}, fit=(c11)(c10)(c12.south -| c11.west)] (PD) {};
+  \end{scope}
+
+  % ------------------------------------------------------- evaluation
+  \coordinate (top3) at ($(PC.south)!0.5!(PD.south)+(0,-1.45)$);
+  \draw[flow] ($(PC.south)!0.5!(PD.south)$) -- (top3) node[midway, right=2pt, lblc] {measured by};
+  \node[part, anchor=north, text width=136mm] (ce) at ([yshift=-6mm]top3)
+    {\textbf{Learning-gain evaluation}: simulated ablation (full framework, without the
+     context model, non-adaptive baseline) and a pilot kit ready for a real class
+     (random arms, pre-test and post-test, consent, analysis)\gaps{G5}};
+  \coordinate (el) at ($(ce.west -| PC.west)+(8pt,0)$);
+  \coordinate (er) at ($(ce.east -| PD.east)+(-8pt,0)$);
+  \begin{scope}[on background layer]
+    \node[layer={pData}{Evaluation}, fit=(ce)(el)(er)] (PE) {};
+  \end{scope}
+
+  % ----------------------------------------------------------- legend
+  \node[note, anchor=north west, text=pInk, draw=none] at ([yshift=-2mm]PE.south west)
+    {\tikz[baseline=-0.6ex]\node[comp, draw=pOk, fill=pOkL, minimum width=6mm, minimum height=3mm, inner sep=0pt] {};\ implemented \qquad
+     \tikz[baseline=-0.6ex]\node[comp, draw=pWarn, fill=pWarnL, minimum width=6mm, minimum height=3mm, inner sep=0pt] {};\ partial \qquad
+     {\color{pLms}\bfseries G1\,$\cdot$\,G2}\ gaps addressed by the contribution};
 \end{tikzpicture}
 \end{document}

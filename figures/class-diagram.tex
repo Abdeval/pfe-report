@@ -1,49 +1,52 @@
 \documentclass[tikz,border=4pt]{standalone}
 \input{pfe-style}
+% Core domain model, read top to bottom in three columns: identity; chat,
+% learner state and context; assessment and teaching. The classes added in
+% sprints 8-12 are in class-diagram-ext.tex.
 \begin{document}
 \begin{tikzpicture}[
-  cls/.style={umlclass=36mm},
+  cls/.style={umlclass=38mm},
   as/.style={draw=pInk, thick},
   comp/.style={draw=pInk, thick, -{Diamond[open=false, length=2.6mm, width=1.8mm]}},
   dp/.style={draw=pMuted, thick, dashed, -{Stealth[length=1.8mm]}},
   m/.style={font=\scriptsize, inner sep=1pt, fill=white},
   pk/.style 2 args={draw=#1, fill=#1!4, rounded corners=5pt, dashed, thick, inner xsep=6pt, inner ysep=13pt,
     label={[anchor=south west, font=\scriptsize\bfseries, text=#1, xshift=2pt, yshift=1pt]south west:#2}}]
-  \def\cA{0} \def\cB{4.7} \def\cC{9.4} \def\cD{14.1} \def\cE{18.8}
-  \def\rA{0} \def\rB{-4.3} \def\rC{-8.4} \def\rD{-12.2}
+  \def\cA{0} \def\cB{4.9} \def\cC{9.8}
+  \def\rA{0} \def\rB{-3.6} \def\rC{-6.9} \def\rD{-10.0} \def\rE{-14.0} \def\rF{-17.2} \def\rG{-20.2}
   % ================================================================ identity
   \node[cls] (user) at (\cA,\rA) {\textbf{User}\nodepart{second}id, moodle\_user\_id\\username, display\_name\\role, locale\nodepart{third}};
   \node[cls] (enr) at (\cB,\rA) {\textbf{Enrolment}\nodepart{second}role\\last\_access\_at\nodepart{third}};
   \node[cls] (course) at (\cC,\rA) {\textbf{Course}\nodepart{second}id, moodle\_course\_id\\shortname, fullname\nodepart{third}};
-  % ================================================================ learner state
-  \node[cls] (lcs) at (\cB,\rB) {\textbf{LearnerCourseState}\nodepart{second}version: int\\mastery: Map\textless Topic, TopicMastery\textgreater\\misconceptions\\interaction\_stats\\context: LearnerContext\nodepart{third}};
-  \node[cls] (tm) at (\cB,\rC) {\textbf{TopicMastery}\nodepart{second}p\_known: float\\attempts: int\nodepart{third}};
-  \node[cls] (lctx) at (\cB,\rD) {\textbf{LearnerContext}\nodepart{second}last access, days\_inactive\\upcoming deadlines\\completed activities\\quiz grades, current\_topic\\reading time, readiness\nodepart{third}};
   % ================================================================ chat and tracing
-  \node[cls] (sess) at (\cA,\rB) {\textbf{LearningSession}\nodepart{second}id\nodepart{third}};
+  \node[cls] (sess) at (\cA,\rB) {\textbf{LearningSession}\nodepart{second}id, user, course\nodepart{third}};
   \node[cls] (msg) at (\cA,\rC) {\textbf{Message}\nodepart{second}content, intent\\citations, trace\_id\nodepart{third}};
   \node[cls] (step) at (\cA,\rD) {\textbf{AgentStep}\nodepart{second}name (classify, retrieve\dots)\\status: running \textbar\ done\\details, duration\nodepart{third}};
+  % ================================================================ learner state
+  \node[cls] (lcs) at (\cB,\rB) {\textbf{LearnerCourseState}\nodepart{second}version: int\\mastery: Map\textless Topic, TopicMastery\textgreater\\misconceptions\\interaction\_stats\\context: LearnerContext\\personalization\nodepart{third}};
+  \node[cls] (tm) at (\cB,\rC) {\textbf{TopicMastery}\nodepart{second}p\_known: float\\attempts: int\nodepart{third}};
+  \node[cls] (lctx) at (\cB,\rD) {\textbf{LearnerContext}\nodepart{second}last access, days\_inactive\\upcoming deadlines\\completed activities\\quiz grades, current\_topic\\reading time, readiness\nodepart{third}};
   % ================================================================ context
   \node[cls] (cctx) at (\cC,\rB) {\textbf{CourseContext}\nodepart{second}version: int\\deadlines\\prerequisite graph\nodepart{third}};
   \node[cls] (iv) at (\cC,\rC) {\textbf{Intervention}\nodepart{second}trigger, reason, action\\dedupe\_key\\status: new \textbar\ seen \textbar\\ \ dismissed \textbar\ done\nodepart{third}};
   \node[cls] (av) at (\cC,\rD) {\textbf{ActivityView}\nodepart{second}cmid, views\\seconds (reading)\nodepart{third}};
   % ================================================================ assessment
-  \node[cls] (quiz) at (\cD,\rB) {\textbf{Quiz}\nodepart{second}topic\_key, lang\\status\nodepart{third}};
-  \node[cls] (qi) at (\cD,\rC) {\textbf{QuizItem}\nodepart{second}stem, options\\answer\_index\nodepart{third}};
-  \node[cls] (qr) at (\cD,\rD) {\textbf{QuizResponse}\nodepart{second}chosen\_index, correct\\p\_known\_before\\p\_known\_after\nodepart{third}};
+  \node[cls] (quiz) at (\cA,\rE) {\textbf{Quiz}\nodepart{second}user, course\\topic\_key, lang\\status\nodepart{third}};
+  \node[cls] (qi) at (\cA,\rF) {\textbf{QuizItem}\nodepart{second}stem, options\\answer\_index\nodepart{third}};
+  \node[cls] (qr) at (\cA,\rG) {\textbf{QuizResponse}\nodepart{second}chosen\_index, correct\\p\_known\_before\\p\_known\_after\nodepart{third}};
+  \node[cls] (q) at (\cB,\rF) {\textbf{Question}\nodepart{second}course, section, language\\stem, options, answer\_index\\status, reviewer\\auto\_published, edited\nodepart{third}};
   % ================================================================ teaching
-  \node[cls] (pol) at (\cD,\rA) {\textbf{CoursePolicy}\nodepart{second}review\_mode\\objectives, version\nodepart{third}};
-  \node[cls] (ms) at (\cE,\rA) {\textbf{MaterialSuggestion}\nodepart{second}kind, evidence\\diagnosis, draft\\status\nodepart{third}};
-  \node[cls] (q) at (\cE,\rC) {\textbf{Question}\nodepart{second}course, section, language\\stem, options, answer\_index\\status, reviewer\\auto\_published, edited\nodepart{third}};
+  \node[cls] (pol) at (\cC,\rE) {\textbf{CoursePolicy}\nodepart{second}course\\review\_mode\\objectives, version\nodepart{third}};
+  \node[cls] (ms) at (\cC,\rF) {\textbf{MaterialSuggestion}\nodepart{second}course, kind, evidence\\diagnosis, draft\\status\nodepart{third}};
   % ================================================================ service
-  \node[umlclass=40mm, draw=pApi, rectangle split part fill={pApiL,white,white}] (ss) at (\cE,\rD)
+  \node[umlclass=40mm, draw=pApi, rectangle split part fill={pApiL,white,white}] (ss) at (\cB,\rE)
     {\textbf{\guillemotleft service\guillemotright\ StateStore}\nodepart{second}uses: LearnerCourseState,\\CourseContext
      \nodepart{third}load\_turn\_context()\\commit\_turn() (optimistic,\\version check, retries)};
   % ================================================================ packages (background)
   \begin{scope}[on background layer]
     \node[pk={pData}{identity}, fit=(user)(course)] {};
-    \node[pk={pAgent}{learner state}, fit=(lcs)(lctx)] {};
     \node[pk={pWeb}{chat \& tracing}, fit=(sess)(step)] {};
+    \node[pk={pAgent}{learner state}, fit=(lcs)(lctx)] {};
     \node[pk={pLms}{context}, fit=(cctx)(av)] {};
     \node[pk={pApi}{assessment}, fit=(quiz)(qr)(q)] {};
     \node[pk={pAi}{teaching}, fit=(pol)(ms)] {};
@@ -61,11 +64,8 @@
   \draw[comp] (cctx) -- node[m, right, pos=0.15] {1} (course);
   \draw[as] (iv.north west) -- node[m, pos=0.15] {*} node[m, pos=0.85] {1} (lcs.south east);
   \draw[dp] (av) -- node[m, above=1pt, pos=0.45] {\guillemotleft feeds\guillemotright} (lctx);
-  \draw[as] (course) -- node[m, above, pos=0.12] {1} node[m, above, pos=0.85] {1} (pol);
-  \draw[as] (course.north) -- ++(0,0.55) -| node[m, pos=0.06, left] {1} node[m, pos=0.93, right] {*} (ms.north);
-  \draw[as] (course.south east) -- node[m, pos=0.12] {1} node[m, pos=0.85] {*} (quiz.north west);
   \draw[comp] (qi) -- node[m, right, pos=0.2] {*} (quiz);
   \draw[as] (qi) -- node[m, right, pos=0.15] {1} node[m, right, pos=0.85] {*} (qr);
   \draw[dp] (qi) -- node[m, above=1pt] {copy of} node[m, below=1pt, pos=0.8] {0..1} (q);
-  \end{tikzpicture}
+\end{tikzpicture}
 \end{document}

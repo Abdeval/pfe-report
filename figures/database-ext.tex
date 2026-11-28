@@ -1,0 +1,44 @@
+\documentclass[tikz,border=4pt]{standalone}
+\input{pfe-style}
+% Tables added in sprints 8-12: study (pilot), personalization, LTI and
+% early warning. Four columns read top to bottom.
+\begin{document}
+\begin{tikzpicture}[
+  tb/.style={table=#1, text width=31mm},
+  fk/.style={draw=pMuted, thick, -{Stealth[length=1.8mm]}},
+  grp/.style 2 args={draw=#1, fill=#1!4, rounded corners=5pt, thick, dashed, inner xsep=5pt, inner ysep=12pt,
+    label={[anchor=north west, font=\scriptsize\bfseries, text=#1, xshift=2pt, yshift=-1pt]north west:#2}},
+  vg/.style={below=6mm of #1}]
+  \newcommand{\tbh}[1]{\textcolor{white}{\scriptsize\bfseries #1}}
+  \def\cA{0} \def\cB{4.15} \def\cC{8.3} \def\cD{12.45} \def\rB{-6.9}
+  % ============================================================ study (pilot)
+  \node[tb=pOk, anchor=north] (sc) at (\cA,0) {\tbh{study\_condition}\nodepart{second}\fk{user\_id}, \fk{course\_id}\\arm (full, baseline)\\pseudonym\\assigned\_by, assigned\_at};
+  \node[tb=pOk, vg=sc] (cons) {\tbh{study\_consent}\nodepart{second}\fk{user\_id}, \fk{course\_id}\\consented, answered\_at\\withdrawn\_at};
+  \node[tb=pOk, vg=cons] (sus) {\tbh{sus\_response}\nodepart{second}\fk{user\_id}, \fk{course\_id}\\answers (10 items)\\score};
+  \node[tb=pOk, anchor=north] (kt) at (\cB,0) {\tbh{knowledge\_test}\nodepart{second}\fk{course\_id}, phase (pre, post)\\items jsonb (copied)\\created\_by};
+  \node[tb=pOk, vg=kt] (kta) {\tbh{knowledge\_test\_attempt}\nodepart{second}\fk{user\_id}, \fk{course\_id}, phase\\answers jsonb\\correct, total\\submitted\_at};
+  % ============================================================ personalization
+  \node[tb=pAgent, anchor=north] (fb) at (\cC,0) {\tbh{message\_feedback}\nodepart{second}\fk{message\_id}, \fk{user\_id}\\rating (up, down)\\reason};
+  \node[tb=pAgent, vg=fb] (ov) {\tbh{recommendation\_override}\nodepart{second}\pk{id}, \fk{course\_id}\\\fk{user\_id} (empty: class)\\topic\_key, action (pin, skip)\\note, created\_by};
+  % ============================================================ LTI
+  \node[tb=pLms, anchor=north] (dep) at (\cD,0) {\tbh{lti\_deployment}\nodepart{second}\pk{issuer, client\_id,}\\\pk{deployment\_id}\\first\_seen\_at};
+  \node[tb=pLms, vg=dep] (link) {\tbh{lti\_resource\_link}\nodepart{second}\pk{issuer, resource\_link\_id}\\\fk{course\_id}\\title, lineitem\_url};
+  % ============================================================ early warning
+  \node[tb=pAi, anchor=north] (rs) at (\cA,\rB) {\tbh{risk\_snapshot}\nodepart{second}\fk{user\_id}, \fk{course\_id}, day\\score, level\\features jsonb\\reasons jsonb\\model\_version};
+  \node[tb=pAi, anchor=north] (rf) at (\cB,\rB) {\tbh{risk\_followup}\nodepart{second}\pk{id}, \fk{user\_id}, \fk{course\_id}\\\fk{teacher\_id}, kind\\message, score, level\\reasons jsonb\\\fk{intervention\_id}};
+  % ============================================================ groups
+  \begin{scope}[on background layer]
+    \node[grp={pOk}{Study (pilot)}, fit=(sc)(sus)(kta)] {};
+    \node[grp={pAgent}{Personalization}, fit=(fb)(ov)] {};
+    \node[grp={pLms}{LTI}, fit=(dep)(link)] {};
+    \node[grp={pAi}{Early warning}, fit=(rs)(rf)] {};
+  \end{scope}
+  % ============================================================ legend
+  \node[note, anchor=north west, text=pInk, text width=70mm] at ([xshift=-1.65cm]\cC,\rB)
+    {\pk{id} primary key \quad \fk{column} foreign key\\[1mm]
+     \textit{user\_id} and \textit{teacher\_id} reference \texttt{app\_user},
+     \textit{course\_id} references \texttt{course}, \textit{message\_id} references
+     \texttt{message} and \textit{intervention\_id} references \texttt{intervention}
+     (the nudge); these arrows are omitted for readability.};
+\end{tikzpicture}
+\end{document}
