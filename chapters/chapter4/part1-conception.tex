@@ -114,26 +114,26 @@ The non-functional requirements follow from the contributions and from
 the context of an Algerian university.
 
 \begin{description}[leftmargin=1.5cm, labelwidth=1.3cm, labelsep=0.2cm, style=sameline, font=\normalfont\bfseries]
-  \item[NFR-1] \textbf{Moodle core untouched.} The integration uses only
+  \item[NFR-1] \textbf{Moodle core untouched:} The integration uses only
         web services and LTI~1.3; no plugin is required, and the only
         write is the progress grade, through LTI's grade service.
-  \item[NFR-2] \textbf{Privacy.} A single Moodle token, held by one
+  \item[NFR-2] \textbf{Privacy:} A single Moodle token, held by one
         service; signed, short-lived file links; an option to run the
         language model locally; consent, withdrawal and pseudonymized
         exports in a study.
-  \item[NFR-3] \textbf{Traceability.} Every routing decision and agent
+  \item[NFR-3] \textbf{Traceability:} Every routing decision and agent
         step is logged with a trace identifier.
-  \item[NFR-4] \textbf{Grounding.} Answers come only from the course
+  \item[NFR-4] \textbf{Grounding:} Answers come only from the course
         material, with citations, or the tutor says that the answer is not
         in the course.
-  \item[NFR-5] \textbf{Responsiveness.} Answers are streamed; long tasks
+  \item[NFR-5] \textbf{Responsiveness:} Answers are streamed; long tasks
         (ingestion, quiz writing, material drafts) run in the background.
-  \item[NFR-6] \textbf{Testability.} LLMs are replaced by fake models in
+  \item[NFR-6] \textbf{Testability:} LLMs are replaced by fake models in
         the automated tests, so the tests never call an LLM.
   \item[NFR-7] \textbf{Bilingual interface} (French and English).
-  \item[NFR-8] \textbf{Deployability.} The whole stack starts with Docker
+  \item[NFR-8] \textbf{Deployability:} The whole stack starts with Docker
         Compose.
-  \item[NFR-9] \textbf{Explainability.} Every recommendation and every
+  \item[NFR-9] \textbf{Explainability:} Every recommendation and every
         warning carries the structured reasons of the rule or model that
         produced it; no explanation is written by an LLM.
 \end{description}
@@ -710,17 +710,17 @@ Early warning & \texttt{risk\_snapshot} & daily risk of a student & day, score, 
 
 Three choices shape this design:
 \begin{itemize}
-  \item \emph{One database for everything.} PostgreSQL with the pgvector
+  \item \emph{One database for everything:} PostgreSQL with the pgvector
         extension holds the relational data, the learner state as
         \texttt{jsonb} and the vectors of the course chunks. Retrieval can
         therefore combine vector search and full-text search in one query
         engine, and there is no second store to keep consistent.
-  \item \emph{\texttt{jsonb} plus a version column for shared state.} The
+  \item \emph{\texttt{jsonb} plus a version column for shared state:} The
         parts of the learner state, the course context and the course
         policy are \texttt{jsonb} documents, so they can evolve without a
         migration, and each row carries a \texttt{version} that implements
         the optimistic concurrency of the \texttt{StateStore}.
-  \item \emph{Migrations owned by one tool.} The schema is defined by SQL
+  \item \emph{Migrations owned by one tool:} The schema is defined by SQL
         migrations applied by dbmate in a one-shot container, and both the
         API and the agents derive their types from it.
 \end{itemize}

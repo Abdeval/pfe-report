@@ -103,7 +103,7 @@ G8 & No French or Arabic support; cloud LLMs on student data; local context igno
 \label{sec-c1}
 % =====================================================================
 
-\paragraph{Problem.} In the systems reviewed, the learner is described by
+\paragraph{Problem:} In the systems reviewed, the learner is described by
 a profile written in natural language by an LLM
 (GenMentor~\cite{wang2025genmentor}), by an interaction history and a
 two-variable state (ELA Tutor~\cite{lopezgoyez2026ela}), or by engagement
@@ -113,7 +113,7 @@ models and was not implemented (gap G1). When several agents keep their
 own picture of the learner, they also disagree with each other, and their
 decisions cannot be audited.
 
-\paragraph{Proposal.} The framework keeps \emph{one} learner state per
+\paragraph{Proposal:} The framework keeps \emph{one} learner state per
 pair (learner, course), shared by every agent. This \emph{shared learner
 state} holds four parts: the knowledge of the learner (the BKT mastery of
 each section of the course, see \cref{sec-c3}), the misconceptions
@@ -131,7 +131,7 @@ of them reads and writes.
   \label{fig-multi-agent}
 \end{figure}
 
-\paragraph{How it works.} The state of a learner in a course is a row of
+\paragraph{How it works:} The state of a learner in a course is a row of
 the table \texttt{learner\_course\_state}. Its parts are \texttt{jsonb}
 columns, mirrored by Pydantic models on the agent side, and the row
 carries an integer \texttt{version}. A turn of an agent follows three
@@ -198,7 +198,7 @@ start writing its part of the learner model without a database
 migration. Fields that become stable are then promoted to typed
 attributes, and to columns if they need an index.
 
-\paragraph{Evidence.} The agents are covered by 225 automated tests
+\paragraph{Evidence:} The agents are covered by 225 automated tests
 (\texttt{pytest}), in which LLMs are replaced by fake models, so the tests
 never call an LLM. The history of a learner can be replayed from
 \texttt{context\_snapshot}, one version per turn. In a
@@ -208,7 +208,7 @@ the activity as completed, set the days of inactivity to zero, moved the
 current section forward and marked the next section as ready, all in one
 new version of the learner state.
 
-\paragraph{Limits.} Device and affect are not modelled: they are cheap to
+\paragraph{Limits:} Device and affect are not modelled: they are cheap to
 add from the web app but were not needed for the thesis. The
 \texttt{jsonb} parts trade some type safety in SQL for the ability to
 evolve; validation happens in the Pydantic models. The embedding
@@ -220,19 +220,19 @@ embedding model requires a migration and a new ingestion of the course.
 \label{sec-c3}
 % =====================================================================
 
-\paragraph{Problem.} No reviewed LLM-based system feeds a calibrated
+\paragraph{Problem:} No reviewed LLM-based system feeds a calibrated
 estimate of mastery to its agents (gap G2). Deep knowledge tracing
 appears only in CA-MA-DRL, which uses no LLM~\cite{sharif2026camadrl}.
 Without such an estimate, an agent cannot decide what the learner should
 study next, nor adapt the depth of an explanation.
 
-\paragraph{Proposal.} The framework applies Bayesian Knowledge Tracing
+\paragraph{Proposal:} The framework applies Bayesian Knowledge Tracing
 (BKT)~\cite{corbett1994kt} to each section of the Moodle course. A
 \emph{topic} is a Moodle section, with the key \texttt{s<n>}: the teacher
 already defines sections, they are stable across re-ingestions, and a jury
 can read them. Agents receive mastery numbers, not raw text.
 
-\paragraph{How it works.} Each topic carries $P(L)$, the probability that
+\paragraph{How it works:} Each topic carries $P(L)$, the probability that
 the learner has learned it. After a graded answer, the posterior is
 computed with the slip probability $S$ and the guess probability $G$.
 After a correct answer:
@@ -299,7 +299,7 @@ to adapt the depth of its explanations.
   \label{fig-adaptive-loop}
 \end{figure}
 
-\paragraph{Evidence.} The behaviour of BKT with these parameters was
+\paragraph{Evidence:} The behaviour of BKT with these parameters was
 measured by simulation: 2000 simulated learners per profile, 20 answers
 each (\cref{tab-bkt-sim}). Learners who know the topic reached mastery
 after a median of 3 answers; learners who learn it as the model assumes,
@@ -329,7 +329,7 @@ guesses & 0.33 & 0.35 & 0.35 & 21.1\,\% (at least once) & 11 \\
 \end{tabular}
 \end{table}
 
-\paragraph{Limits.} The parameters are global, not fitted per section.
+\paragraph{Limits:} The parameters are global, not fitted per section.
 Fitting $T$ per topic from real answers (for example with
 expectation-maximization) is the principled fix for the guessing profile,
 once enough data exists. The offline validation of the model on a public
@@ -340,21 +340,21 @@ dataset such as ASSISTments, with the AUC as metric, is future work.
 \label{sec-c2}
 % =====================================================================
 
-\paragraph{Problem.} The tutors reviewed are reactive: they wait for the
+\paragraph{Problem:} The tutors reviewed are reactive: they wait for the
 learner's question (gap G4). ELA Tutor chooses \emph{how} to answer a
 question, but it does not act when a deadline approaches or when a
 learner stops working~\cite{lopezgoyez2026ela}. Proactive triggers exist
 only as rules in an unimplemented design~\cite{khaddar2026ijacsa} or as
 part of a conceptual framework~\cite{sharif2026camadrl}.
 
-\paragraph{Proposal.} A dedicated \emph{Context agent} implements the
+\paragraph{Proposal:} A dedicated \emph{Context agent} implements the
 context lifecycle: it acquires data from Moodle and from the app, models
 it into the course and learner contexts, and disseminates it to the other
 agents. After each update, explicit rules turn the context into
 \emph{interventions}: suggestions shown to the learner with their reason
 and a suggested action.
 
-\paragraph{How it works.} Moodle offers no web service for activity logs,
+\paragraph{How it works:} Moodle offers no web service for activity logs,
 and its core is never modified, so the context is \emph{polled} through
 web services, always through the API, which stays the only Moodle client
 (\cref{sec-c8}). The sources are the course contents with their
@@ -420,7 +420,7 @@ section they could not yet learn well, and the rule was changed
 context, for example a deadline in two days on the current section, so
 that it can relate its answer to what the learner is doing.
 
-\paragraph{Evidence.} The class view of the teacher reuses the same
+\paragraph{Evidence:} The class view of the teacher reuses the same
 trigger rules as risk flags (\cref{sec-c6}). In the verification of the
 teacher pages on the demo course, each of the three students showed the
 expected flags: close deadline, failed Moodle quiz, prerequisite gap,
@@ -428,7 +428,7 @@ inactivity and below objective. In a live tutor turn, the \texttt{adapt}
 step reported the deadline of an assignment due in two days on the
 current section (\cref{sec-c4}).
 
-\paragraph{Limits.} Polling adds a delay of up to the sync interval and a
+\paragraph{Limits:} Polling adds a delay of up to the sync interval and a
 Moodle load proportional to the number of learners times the number of
 courses. Moodle 4.5 has no web service that reads its logs, so the views
 made in Moodle itself are only known through completion; a local Moodle
@@ -442,7 +442,7 @@ the demo course but not tuned on real classes.
 \label{sec-c11}
 % =====================================================================
 
-\paragraph{Problem.} The adaptive loop of \cref{sec-c3} decides
+\paragraph{Problem:} The adaptive loop of \cref{sec-c3} decides
 \emph{what} a learner practises, but four elements expected by the
 literature were missing. The learner had no goal, whereas GenMentor starts
 from the learner's goal to derive a skill gap and a
@@ -454,14 +454,14 @@ reinforcement-learning meta-agent evaluated in
 simulation~\cite{lopezgoyez2026ela}. Finally, the teacher could set
 objectives for the class (\cref{sec-c6}), but not steer one student.
 
-\paragraph{Proposal.} Five additions, all in the shared state and all
+\paragraph{Proposal:} Five additions, all in the shared state and all
 decided in code: a per-course goal of the learner, a goal-aware learning
 path, a structured ``why'' for every recommendation, an explanation style
 chosen from feedback by a bandit, and a teacher override.
 
-\paragraph{How it works.}
+\paragraph{How it works:}
 \begin{itemize}
-  \item \emph{Goal and profile.} A learner sets, for each course, a
+  \item \emph{Goal and profile:} A learner sets, for each course, a
         \emph{goal} (pass every section, master the teacher's key
         sections, prepare an exam on chosen sections by a date, or work on
         chosen sections), a self-rated level and a preferred explanation
@@ -469,7 +469,7 @@ chosen from feedback by a bandit, and a teacher override.
         only through the \texttt{StateStore} (\cref{sec-c1}), so every
         agent reads the same goal. A card on the course page asks for them;
         nothing blocks a learner who ignores it.
-  \item \emph{Learning path.} The Recommendation agent turns its ranking
+  \item \emph{Learning path:} The Recommendation agent turns its ranking
         into an ordered path: the target sections of the goal (plus the
         teacher's pins, minus the skips), expanded with their unmet
         prerequisites, ordered prerequisites first, then by deadline (the
@@ -477,7 +477,7 @@ chosen from feedback by a bandit, and a teacher override.
         is \emph{done}, \emph{current} or \emph{to do} against the
         teacher's target. It is a rule, not an optimizer: it needs no
         training data and can be explained.
-  \item \emph{``Why this?''.} Every recommendation carries a list of
+  \item \emph{``Why this?'':} Every recommendation carries a list of
         structured reasons, built in the same branch of the ranking that
         chose it, with the facts that fired the rule: for example
         \texttt{low\_mastery} with the estimate and the target,
@@ -486,7 +486,7 @@ chosen from feedback by a bandit, and a teacher override.
         \texttt{teacher\_pin} with the teacher's note. The interface turns
         them into sentences. The LLM never writes the explanation: an
         explanation must be the actual reason, not a plausible one.
-  \item \emph{Explanation style.} For a concept question, the Tutor
+  \item \emph{Explanation style:} For a concept question, the Tutor
         chooses one of three formats: a worked example first, step by
         step, or a concise summary. The choice is made by Thompson
         sampling~\cite{thompson1933,russo2018ts} over a Beta posterior per
@@ -501,7 +501,7 @@ chosen from feedback by a bandit, and a teacher override.
         matching hypothesis has no adequate evidence~\cite{pashler2008},
         and the system makes no claim about the learner's type
         (\cref{subsec-foundations}).
-  \item \emph{Teacher override.} On the class page, the teacher can
+  \item \emph{Teacher override:} On the class page, the teacher can
         \emph{pin} a section, which then comes first with ``your teacher
         asked'' and the teacher's note, or \emph{skip} it, for one student
         or for the whole class. A student-level override wins over a class
@@ -509,7 +509,7 @@ chosen from feedback by a bandit, and a teacher override.
         sees and can remove them.
 \end{itemize}
 
-\paragraph{Evidence.} The bandit was added as a fourth arm to the
+\paragraph{Evidence:} The bandit was added as a fourth arm to the
 simulated ablation of \cref{sec-c-eval}. Each simulated learner received
 a hidden preferred style; an explanation in that style multiplied the
 learning rate by 1.25, and learners gave a thumb 40\,\% of the time, the
@@ -522,7 +522,7 @@ with the style effect and when learning was harder, and it was exactly
 zero when styles had no effect (a test checks it): the bandit never made
 learning worse.
 
-\paragraph{Limits.} The effect of a format on real students is unknown;
+\paragraph{Limits:} The effect of a format on real students is unknown;
 the simulation only shows that the bandit learns a preference when one
 exists and does no harm otherwise. The path is a rule and can be
 suboptimal when goals and deadlines conflict. The learners of the
@@ -533,13 +533,13 @@ baseline arm of the pilot get none of these features (\cref{sec-c-eval}).
 \label{sec-c4}
 % =====================================================================
 
-\paragraph{Problem.} Each reviewed system adapts one dimension: ELA Tutor
+\paragraph{Problem:} Each reviewed system adapts one dimension: ELA Tutor
 adapts how to answer, GenMentor adapts the path and the content outside
 any LMS, IJACSA-Arch adapts interventions by rules (gap G3). In addition,
 when an LLM takes pedagogical decisions, the decisions are hard to
 explain to a teacher (gaps G6 and G7).
 
-\paragraph{Proposal.} The framework splits the work among specialized
+\paragraph{Proposal:} The framework splits the work among specialized
 agents, coordinated through explicit graphs and the shared state
 (\cref{tab-agents-roster}). It follows a principle already stated by ELA
 Tutor~\cite{lopezgoyez2026ela}: \emph{code decides, the LLM writes}.
@@ -572,7 +572,7 @@ Ingestion (worker) & index the course & code & embeddings only \\
 \end{tabularx}
 \end{table}
 
-\paragraph{How it works.} A tutor turn is a LangGraph~\cite{langgraph_docs}
+\paragraph{How it works:} A tutor turn is a LangGraph~\cite{langgraph_docs}
 graph (\cref{fig-tutor-graph}). The \texttt{classify} node finds the intent
 of the message (concept, exercise, quiz, course\_info, smalltalk or
 off\_topic), its language and its topic, with rules first. Smalltalk ends
@@ -601,7 +601,7 @@ conversation shows them again. The model's own chain of thought is
 \emph{never} shown: in hint mode it could reveal the solution that the
 tutor must withhold, and it is not a trace of the system's decisions.
 
-\paragraph{Evidence.} For the question ``What does \texttt{range(5)} give
+\paragraph{Evidence:} For the question ``What does \texttt{range(5)} give
 in a \texttt{for} loop?'', the chat showed: \texttt{classify} (concept,
 by rule, 7\,ms), \texttt{retrieve} (6 passages, best section ``Conditions
 and loops'' with similarity 0.62, 3.4\,s), \texttt{adapt} (mastery 20\,\%,
@@ -610,7 +610,7 @@ citation). An off-topic question about Django and PostgreSQL ended in
 \texttt{not\_found}, with the closest sections of the course. The steps
 make the multi-agent decisions visible at no extra LLM cost.
 
-\paragraph{Limits.} The rules of the classifier and the thresholds were
+\paragraph{Limits:} The rules of the classifier and the thresholds were
 set on one demo course. The LLM classifier is only a fallback, and the
 router is the extension point for a learned policy such as the
 reinforcement-learning meta-agent of ELA Tutor~\cite{lopezgoyez2026ela},
@@ -621,7 +621,7 @@ which is out of scope here.
 \label{sec-c5}
 % =====================================================================
 
-\paragraph{Problem.} Grounding on the course material is vague in the
+\paragraph{Problem:} Grounding on the course material is vague in the
 reviewed systems (``curated sources'' in ELA Tutor) or only described
 conceptually (IJACSA-Arch), and the cascade of hallucinations from one
 agent to the next, which the survey of LLM-based multi-agent systems warns
@@ -629,36 +629,36 @@ about~\cite{guo2024mas}, is not measured (gap G7). Most systems also send
 student data to proprietary cloud models (gap G8), which matters under
 the Algerian law on personal data~\cite{algeria_law1807}.
 
-\paragraph{Proposal.} The framework grounds every generated text in the
+\paragraph{Proposal:} The framework grounds every generated text in the
 course and checks it in code before it reaches a learner. A local model
 can replace the hosted one.
 
-\paragraph{How it works.}
+\paragraph{How it works:}
 \begin{itemize}
-  \item \emph{Hybrid retrieval.} The query is matched by vector similarity
+  \item \emph{Hybrid retrieval:} The query is matched by vector similarity
         (pgvector, cosine) and by PostgreSQL full-text search, and the two
         rankings are fused with reciprocal rank fusion~\cite{cormack2009rrf}.
         The 6 best passages are kept. The embeddings are computed with the
         multilingual model bge-m3~\cite{chen2024bgem3}.
-  \item \emph{Similarity gate.} An answer is generated only when the best
+  \item \emph{Similarity gate:} An answer is generated only when the best
         similarity reaches the threshold (0.42 by default, configurable).
-  \item \emph{Citations checked in code.} The answer cites passages by
+  \item \emph{Citations checked in code:} The answer cites passages by
         number; the numbers are validated against the retrieved passages.
-  \item \emph{Refusal.} Below the threshold, the tutor says that the
+  \item \emph{Refusal:} Below the threshold, the tutor says that the
         answer is not in the course and lists the closest sections.
-  \item \emph{Hint mode.} For an exercise, the tutor gives hints, not the
+  \item \emph{Hint mode:} For an exercise, the tutor gives hints, not the
         solution.
-  \item \emph{Validated generation.} A generated quiz item is kept only if
+  \item \emph{Validated generation:} A generated quiz item is kept only if
         it has four distinct options, a valid answer index, sources within
         the retrieved chunks and a unique stem. A draft of the Material
         Improvement agent that quotes a passage keeps the quote only if it
         appears in the excerpts.
-  \item \emph{Local model.} The chat model can run locally with Ollama
+  \item \emph{Local model:} The chat model can run locally with Ollama
         (\texttt{qwen3:4b-instruct}), so student data need not leave the
         institution.
 \end{itemize}
 
-\paragraph{Evidence.} The off-topic question of \cref{sec-c4} was refused
+\paragraph{Evidence:} The off-topic question of \cref{sec-c4} was refused
 with the closest sections. For quiz generation on the four sections of
 the demo course (writer \texttt{openai/gpt-oss-20b} on Groq), the four
 quizzes were generated on the first attempt, 18 of the 20 drafted items
@@ -672,7 +672,7 @@ the questions are in different languages. Faithfulness alone therefore
 cannot certify an item, which is why generated questions go through a
 teacher review (\cref{sec-c6}).
 
-\paragraph{Limits.} There is no separate verifier agent that checks every
+\paragraph{Limits:} There is no separate verifier agent that checks every
 answer before delivery; it is future work. The rate of hallucinations
 cascading between agents is not measured yet.
 
@@ -681,11 +681,11 @@ cascading between agents is not measured yet.
 \label{sec-c9}
 % =====================================================================
 
-\paragraph{Problem.} No reviewed system supports French or Arabic
+\paragraph{Problem:} No reviewed system supports French or Arabic
 (gap G8), whereas Algerian universities teach in Arabic, French and
 English.
 
-\paragraph{Proposal and how it works.} The interface is bilingual
+\paragraph{Proposal and how it works:} The interface is bilingual
 (French and English, with react-i18next). The Tutor answers in the
 learner's language, quizzes are generated in the learner's language, and
 the course material can be in French or in English: the language of each
@@ -695,7 +695,7 @@ other.
 The Material Improvement agent writes its diagnosis in the teacher's
 language and its draft in the language of the material.
 
-\paragraph{Status and limits.} This contribution is \emph{partial}:
+\paragraph{Status and limits:} This contribution is \emph{partial}:
 Arabic is future work. Mixing languages also affects the evaluation: the
 faithfulness metric produced false negatives when the material and the
 questions were in different languages (\cref{sec-c5}).
@@ -705,20 +705,20 @@ questions were in different languages (\cref{sec-c5}).
 \label{sec-c6}
 % =====================================================================
 
-\paragraph{Problem.} Teacher control is future work in ELA Tutor, limited
+\paragraph{Problem:} Teacher control is future work in ELA Tutor, limited
 to dashboards in IJACSA-Arch, absent in GenMentor and unimplemented in
 CA-MA-DRL (gap G6). The survey of LLMs for education calls for the
 instructor to act as a special agent of the system~\cite{wang2024llm4edu}.
 The faithfulness measured in \cref{sec-c5} also shows that generated
 questions must be checked by a human before they count.
 
-\paragraph{Proposal.} The teacher controls three things: a reviewed
+\paragraph{Proposal:} The teacher controls three things: a reviewed
 \emph{question bank}, \emph{objectives} for each section, and a
 \emph{class dashboard}.
 
-\paragraph{How it works.}
+\paragraph{How it works:}
 \begin{itemize}
-  \item \emph{Question bank.} A quiz is filled from the bank first:
+  \item \emph{Question bank:} A quiz is filled from the bank first:
         approved questions of the section, in the learner's language, that
         this learner has never answered. Only the shortfall is generated
         by the LLM. A per-course \emph{review mode} decides what happens to
@@ -730,11 +730,11 @@ questions must be checked by a human before they count.
         as an LLM draft, and every review is traced. A quiz item is a copy
         of a bank question, so a later edit never changes a quiz already
         taken or its BKT history.
-  \item \emph{Objectives.} For each section, the teacher sets a target
+  \item \emph{Objectives:} For each section, the teacher sets a target
         mastery and marks key sections. The Recommendation agent, the
         readiness computed by the Context agent and the dashboard all read
         these objectives; none of them copies them.
-  \item \emph{Class dashboard.} The Learning Analytics agent computes, from
+  \item \emph{Class dashboard:} The Learning Analytics agent computes, from
         the shared state of every enrolled student, a view per section
         (learners assessed, mastered, mean mastery) and per student
         (mastery, inactivity, current section, open suggestions and risk
@@ -747,7 +747,7 @@ questions must be checked by a human before they count.
 The life cycles of a bank question and of a material suggestion are shown
 in \cref{fig-states} (\cref{chap-implementation}).
 
-\paragraph{Evidence.} The flow was verified through the public API on the
+\paragraph{Evidence:} The flow was verified through the public API on the
 demo course, starting from an empty bank in \texttt{review} mode. A
 student's quiz was first refused with the code \texttt{awaiting\_review},
 while questions were written in the background for the teacher. The
@@ -759,7 +759,7 @@ rejected question. One of the generated questions claimed that
 most restrictive to the least'', which the course does not say: exactly
 the kind of item the review exists to catch.
 
-\paragraph{Limits.} In \texttt{review} mode a learner may have to wait
+\paragraph{Limits:} In \texttt{review} mode a learner may have to wait
 for the teacher; the teacher can fill the bank in advance. Rejecting a
 question that was already answered does not replay the BKT history.
 
@@ -768,12 +768,12 @@ question that was already answered does not replay the BKT history.
 \label{sec-c7}
 % =====================================================================
 
-\paragraph{Problem.} The systems reviewed help the learner, but none uses
+\paragraph{Problem:} The systems reviewed help the learner, but none uses
 the learners' difficulties to point the teacher to the parts of the
 course that cause them. An LLM asked to ``critique the course'' would
 produce plausible but unverifiable advice (gaps G6 and G7).
 
-\paragraph{Proposal.} The Material Improvement agent goes beyond the
+\paragraph{Proposal:} The Material Improvement agent goes beyond the
 contributions planned in the literature analysis. It applies the same
 principle as the other agents: \emph{code finds the problems with
 statistics, the LLM writes a draft, the teacher decides}. The app never
@@ -781,7 +781,7 @@ writes to Moodle: the agent only suggests. It runs on demand, when the
 teacher clicks a button, because a scheduled run would waste the quota of
 a free-tier LLM.
 
-\paragraph{How it works.} \Cref{fig-material-pipeline} shows the
+\paragraph{How it works:} \Cref{fig-material-pipeline} shows the
 pipeline. The evidence is loaded from the shared state: answers with the
 misconception label of each wrong option, the tutor's turns that the
 material could not answer, the reading time and mastery per section, and
@@ -823,7 +823,7 @@ dropped. Each suggestion is then \emph{pending}, \emph{accepted} or
 \emph{rejected}, and \emph{applied} once the teacher has changed the
 material in Moodle; every review is traced.
 
-\paragraph{Evidence.} The detectors were measured on simulated classes
+\paragraph{Evidence:} The detectors were measured on simulated classes
 with planted flaws: 200 random classes for each size, with a confusing
 section, a content gap, a skipped activity and a question with a wrong
 key (\cref{tab-material-eval}). Precision is the share of raised issues
@@ -872,7 +872,7 @@ The live run also found defects that the tests with fake models could not
 show, such as diagnoses written in the language of the excerpts instead
 of the teacher's language; they were fixed.
 
-\paragraph{Limits.} The thresholds are defaults for classes of 20 to 40
+\paragraph{Limits:} The thresholds are defaults for classes of 20 to 40
 learners; small classes produce no suggestion rather than noisy ones.
 Applying a change remains manual (in Moodle, followed by a new
 ingestion), and whether a change helped (mastery before and after) is
@@ -883,7 +883,7 @@ not measured yet.
 \label{sec-c12}
 % =====================================================================
 
-\paragraph{Problem.} The class dashboard of \cref{sec-c6} marks a student
+\paragraph{Problem:} The class dashboard of \cref{sec-c6} marks a student
 ``at risk'' when a trigger of the Context agent fires or a key section is
 below its target. These flags describe what already went wrong. They do
 not say who is likely to end the course below the objectives, how early
@@ -895,12 +895,12 @@ but none of them links the prediction to a learner model shared by
 tutoring agents. Gap G6 also asks that the teacher, not the system,
 decide what happens to a student.
 
-\paragraph{Proposal.} The Learning Analytics agent predicts, for every
+\paragraph{Proposal:} The Learning Analytics agent predicts, for every
 student, the probability of ending the course below the teacher's
 targets in the key sections (all sections when none is key), gives the
 reasons of the prediction, and lets the teacher decide what to do.
 
-\paragraph{How it works.} Eleven features are read from the shared
+\paragraph{How it works:} Eleven features are read from the shared
 learner state and from the app's activity
 (\cref{tab-risk-features}). The model is a logistic regression on the
 standardized features. A logistic model was chosen because each term
@@ -958,7 +958,7 @@ take the teacher out of the decision. Every follow-up records the score
 and the reasons it acted on, and the page shows whether the student came
 back within 7 days.
 
-\paragraph{Evidence.} The model was fitted on 60 simulated classes
+\paragraph{Evidence:} The model was fitted on 60 simulated classes
 (2400 learners) and evaluated on 30 other classes (1200 learners, 38\,\%
 of them ending below the objectives). \Cref{tab-risk-auc} compares it with
 the rule flags of the dashboard, scored by their number. Over all days,
@@ -998,7 +998,7 @@ have been assessed, while a learner who never answers has no estimate and
 no flag. This is a reason to keep the two side by side: the flags say what
 went wrong, the model says who is likely to fall behind.
 
-\paragraph{Limits.} The model is fitted on a simulator that shares its
+\paragraph{Limits:} The model is fitted on a simulator that shares its
 learner model with the production code of the features, so the results
 are conditional on it; the daily snapshots and the post-test of the pilot
 provide the data to refit and re-evaluate it with the same script. Early
@@ -1013,13 +1013,13 @@ never listed, so that they get no adaptivity.
 \label{sec-c8}
 % =====================================================================
 
-\paragraph{Problem.} The closest system integrates Moodle through a
+\paragraph{Problem:} The closest system integrates Moodle through a
 low-code orchestration engine~\cite{lopezgoyez2026ela}; the most complete
 interoperable design, based on LTI 1.3 and xAPI, was not
 implemented~\cite{khaddar2026ijacsa} (gap G3). An institution will not
 adopt a framework that modifies the core of its LMS.
 
-\paragraph{Proposal.} Moodle is the LMS backend and is never modified.
+\paragraph{Proposal:} Moodle is the LMS backend and is never modified.
 The API gateway is its only client and holds the only token. Students
 start from Moodle: the framework is an LTI~1.3 tool~\cite{lti13} launched
 from an activity of the course, so there is no second login. The
@@ -1027,11 +1027,11 @@ integration reads course data and writes only one thing back: each
 learner's progress, as a grade, through the LTI Assignment and Grade
 Services (AGS).
 
-\paragraph{How it works.} \Cref{fig-moodle-integration} shows the
+\paragraph{How it works:} \Cref{fig-moodle-integration} shows the
 integration. The API reads Moodle through its REST web services (the
 functions are listed in the figure).
 
-\emph{Launch.} The API implements the LTI~1.3 core launch. Moodle starts
+\emph{Launch:} The API implements the LTI~1.3 core launch. Moodle starts
 an OpenID Connect login on \texttt{/lti/login}; the API keeps a single-use
 \texttt{state} and \texttt{nonce} (ten minutes, in Redis) and redirects to
 Moodle, which posts a signed \texttt{id\_token} to \texttt{/lti/launch}.
@@ -1045,7 +1045,7 @@ The app's own session token is handed to the web app in the URL
 fragment, which never reaches a server log. The development login can be
 turned off for a pilot.
 
-\emph{Grades back.} After every quiz answer, and at each launch, the API
+\emph{Grades back:} After every quiz answer, and at each launch, the API
 posts the learner's \emph{course progress} to the line item of the
 activity: the share of sections mastered at the teacher's target, out of
 100. It obtains an access token from Moodle with a client-credentials
@@ -1056,7 +1056,7 @@ account and no plugin, and the grade lands on the activity the teacher
 created. The knowledge tests of the pilot (\cref{sec-c-eval}) are never
 graded.
 
-\emph{Course reader.} Students read the course inside the
+\emph{Course reader:} Students read the course inside the
 app: a page is fetched with the service token and \emph{sanitized} in the
 API (an allow-list of tags and attributes, no scripts, styles or
 iframes); files are served through \emph{signed links}, an HMAC bound to
@@ -1082,7 +1082,7 @@ web service for it is a teacher override, recorded as such in Moodle's
 reports. The progress grade is the only write, and it goes through the
 standard channel that LTI provides for it.
 
-\paragraph{Evidence.} In a live check, a lesson was served as sanitized
+\paragraph{Evidence:} In a live check, a lesson was served as sanitized
 HTML, a PDF of the course was streamed through a signed link, an activity
 locked by a restriction was returned as locked with Moodle's sentence, and
 after the lesson was viewed in the app, the next section was unlocked.
@@ -1094,7 +1094,7 @@ course, with the token gone from the address bar; their progress
 (Vitest) replay recorded Moodle responses, and a fake LTI platform with
 its own key tests valid, replayed and forged launches.
 
-\paragraph{Limits.} Moodle's own quizzes and assignments still open in
+\paragraph{Limits:} Moodle's own quizzes and assignments still open in
 Moodle. Moodle's completion report does not show the views made in the
 app; our dashboard does. Only the core launch and AGS are implemented:
 the roster service and deep linking of LTI Advantage are not used. Moodle
@@ -1106,7 +1106,7 @@ Moodle's HTTP client refuses private addresses.
 \label{sec-c-eval}
 % =====================================================================
 
-\paragraph{Problem.} None of the primary works measures a learning gain,
+\paragraph{Problem:} None of the primary works measures a learning gain,
 and Ruffle\&Riley found none~\cite{schmucker2024ruffle} (gap G5). Two
 questions are asked: does the adaptive loop improve learning compared with
 a learner who works through the course without a learner model, and does
@@ -1115,10 +1115,10 @@ needs students, time and ethics approval. A simulation can be run first,
 and it also tests the decision rules on many learners; its limit is that
 it only shows what follows from its own assumptions.
 
-\paragraph{Proposal.} The evaluation has two parts: a simulated ablation,
+\paragraph{Proposal:} The evaluation has two parts: a simulated ablation,
 run now, and a pilot kit inside the app, ready to run with a real class.
 
-\paragraph{Simulated ablation.} The same simulated learners study the
+\paragraph{Simulated ablation:} The same simulated learners study the
 same course with the same budget (12 days, 3 questions a day) under three
 conditions; only the choice of the section to practise each day differs.
 In the \emph{full} condition, the Recommendation agent's ranking uses the
@@ -1170,7 +1170,7 @@ check. The advantages also shrink when learning is easy, because there is
 less to gain from choosing well. The BKT AUC was about 0.77 in every
 condition.
 
-\paragraph{The evaluation changed a decision.} The first run used the
+\paragraph{The evaluation changed a decision:} The first run used the
 ranking rule of the first version, in which a close deadline came before
 an unmet prerequisite. Full learners were then sent to the deadline
 section from the first day, before knowing its prerequisite, and learned
@@ -1181,10 +1181,10 @@ the prerequisites of the close-deadline section first, the gain became
 0.758, within noise), so it costs nothing if the assumption is wrong. The
 rule of \cref{sec-c2} was changed accordingly.
 
-\paragraph{Pilot kit.} The pilot that decides the real claim runs inside
+\paragraph{Pilot kit:} The pilot that decides the real claim runs inside
 the app. Its protocol is a two-arm, single-blind comparison:
 \begin{itemize}
-  \item \emph{Arms.} The teacher assigns the students at random to the
+  \item \emph{Arms:} The teacher assigns the students at random to the
         full framework or to a baseline arm, keeping the two groups
         balanced; students are not told their arm. The baseline arm keeps
         the tutor, the course reader and quizzes on the sections the
@@ -1192,13 +1192,13 @@ the app. Its protocol is a two-arm, single-blind comparison:
         learner model or the tutor's prompt, no interventions and none of
         the personalization of \cref{sec-c11}. BKT still runs, for the
         analysis.
-  \item \emph{Tests.} A pre-test and a post-test are built by the teacher
+  \item \emph{Tests:} A pre-test and a post-test are built by the teacher
         from approved questions of the bank, with no item shared between
         the two forms. They are scored by the API with no update of the
         learner model, because measuring must not change what is measured,
         and they are never graded in Moodle. The SUS
         questionnaire~\cite{brooke1996sus} opens after the post-test.
-  \item \emph{Consent and data.} A student reads an information sheet and
+  \item \emph{Consent and data:} A student reads an information sheet and
         consents before the pre-test, and can withdraw at any time; a
         student who declines or withdraws keeps using the app and is left
         out of every export. Each student gets a random pseudonym. The
@@ -1207,7 +1207,7 @@ the app. Its protocol is a two-arm, single-blind comparison:
         pseudonyms to usernames is a separate download for the person who
         keeps it, in line with the consent and data-protection principles
         of Law 18-07~\cite{algeria_law1807}.
-  \item \emph{Analysis.} A script runs the analysis plan written in the
+  \item \emph{Analysis:} A script runs the analysis plan written in the
         protocol before any data are collected:
         descriptive statistics per arm, Welch's $t$ test or a Mann--Whitney
         test on $g$ depending on normality, Cohen's $d$ with a bootstrap
@@ -1215,7 +1215,7 @@ the app. Its protocol is a two-arm, single-blind comparison:
         as covariate, and the SUS against the usual reference of 68.
 \end{itemize}
 
-\paragraph{Evidence.} A script drove the API as the teacher and two
+\paragraph{Evidence:} A script drove the API as the teacher and two
 students, one per arm, on the demo course (31 checks, all passed). The
 23 enrolled students were split 12/11. The two test forms shared no item.
 The baseline student had no adaptive model, an empty context, sections in
@@ -1225,7 +1225,7 @@ were identical before and after each test, while a quiz taken between the
 tests updated them. The check found one bug, since fixed: interventions
 created before the assignment stayed in the feed of a baseline student.
 
-\paragraph{Limits.} The simulation shows what follows from the
+\paragraph{Limits:} The simulation shows what follows from the
 simulator's assumptions, not what happens with real students; in
 particular, the value of the context model depends on how much
 prerequisites matter. The pilot has not been run: it needs a class, time

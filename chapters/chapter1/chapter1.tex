@@ -392,35 +392,35 @@ the United States, Germany, Mexico and Brazil.
 
 \subsection{Main platforms}
 
-\paragraph{Moodle.} Open-source platform written in PHP, created by Martin
+\paragraph{Moodle:} Open-source platform written in PHP, created by Martin
 Dougiamas and released in 2002 \cite{dougiamas2003}. It is grounded in a
 social constructivist approach and built around plugins. It is studied in
 detail in \cref{sec-moodle}.
 
-\paragraph{Canvas LMS.} Developed by Instructure, founded in 2008. Canvas
+\paragraph{Canvas LMS:} Developed by Instructure, founded in 2008. Canvas
 is valued for its modern interface and its web-service-oriented design. It
 is now the most used platform in North American higher education
 \cite{onedtech2024}.
 
-\paragraph{Blackboard Learn.} The market pioneer, founded in 1997 and now
+\paragraph{Blackboard Learn:} The market pioneer, founded in 1997 and now
 published by Anthology. The platform offers two experiences,
 \enquote{Original} and \enquote{Ultra}, and has been losing market share
 for several years \cite{edutechnica2025}.
 
-\paragraph{D2L Brightspace.} Proprietary platform from the Canadian
+\paragraph{D2L Brightspace:} Proprietary platform from the Canadian
 company D2L, founded in 1999. It emphasizes accessibility,
 competency-based learning and analytics.
 
-\paragraph{Open edX.} Open-source platform from the edX project of MIT and
+\paragraph{Open edX:} Open-source platform from the edX project of MIT and
 Harvard, opened in 2013. It is designed for massive open online courses
 (MOOCs) rather than for managing a full university curriculum.
 
-\paragraph{Google Classroom.} Online service launched by Google in 2014
+\paragraph{Google Classroom:} Online service launched by Google in 2014
 and integrated into Google Workspace. It is easy to adopt and covers the
 distribution of assignments and communication, but it remains limited in
 advanced assessment, tracking and personalization.
 
-\paragraph{Chamilo.} Open-source LMS launched in 2010, widely used in the
+\paragraph{Chamilo:} Open-source LMS launched in 2010, widely used in the
 Spanish- and French-speaking worlds. It is lighter than Moodle and targets
 organizations that favour simplicity.
 
@@ -542,12 +542,12 @@ without modifying its core. They are summarized in
 \cref{fig-moodle-integration-points}.
 
 \begin{itemize}
-  \item \textbf{Web services.} Moodle exposes several hundred functions
+  \item \textbf{Web services:} Moodle exposes several hundred functions
         (reading courses, contents, grades and completions, creating
         questions, etc.). An external service calls them through REST with
         a token tied to an account and to a set of allowed functions
         \cite{moodle_ws}.
-  \item \textbf{Events and logs.} Every significant action (viewing a
+  \item \textbf{Events and logs:} Every significant action (viewing a
         resource, submitting an assignment, attempting a quiz) triggers an
         event. Events are recorded in the logs and can be caught by
         observers written in a plugin \cite{moodle_events}. Moodle 4.5,
@@ -556,11 +556,11 @@ without modifying its core. They are summarized in
         Our framework therefore builds its traces from the web services
         (completion, quiz grades) and from the activity in its own
         interface; a log observer is a possible extension.
-  \item \textbf{LTI.} Moodle can act as an LTI platform and launch an
+  \item \textbf{LTI:} Moodle can act as an LTI platform and launch an
         external tool from a course, or publish its own activities as a
         tool for other platforms. Version 1.3 and the LTI Advantage
         services are supported.
-  \item \textbf{AI subsystem.} It connects language model providers and
+  \item \textbf{AI subsystem:} It connects language model providers and
         offers AI actions in the interface (\cref{subsec-moodle-ai}).
 \end{itemize}
 
@@ -690,25 +690,25 @@ learning environments} \cite{dahlstrom2014,brown2015}. Our analysis
 highlights six limits, summarized in \cref{tab-limits}.
 
 \begin{enumerate}
-  \item \textbf{A single path.} All enrolled learners usually see the same
+  \item \textbf{A single path:} All enrolled learners usually see the same
         course in the same order. Adaptation exists, but it depends on
         hand-written rules (\cref{subsec-moodle-adaptation}).
-  \item \textbf{No explicit learner model.} The LMS stores grades,
+  \item \textbf{No explicit learner model:} The LMS stores grades,
         completions and logs, but it does not build a representation of
         what the learner has mastered, of their recurring mistakes and of
         their goals.
-  \item \textbf{Context reduced to the structure of the site.} The context
+  \item \textbf{Context reduced to the structure of the site:} The context
         known to the platform is limited to the course and the activity.
         The time of day, the workload, upcoming deadlines or the device in
         use are not exploited.
-  \item \textbf{One-off AI assistance.} The built-in AI tools answer a
+  \item \textbf{One-off AI assistance:} The built-in AI tools answer a
         specific request, with no coordination between functions and no
         link to the learner's tracking (\cref{subsec-moodle-ai}).
-  \item \textbf{Little support for teachers to improve their materials.}
+  \item \textbf{Little support for teachers to improve their materials:}
         Reports show who passed or failed, but they do not link the
         observed difficulties to the parts of the course that might
         explain them.
-  \item \textbf{Scattered data.} Useful traces are spread across the logs,
+  \item \textbf{Scattered data:} Useful traces are spread across the logs,
         the gradebook, the question banks and sometimes an external LRS.
         Exploiting them requires integration work that the platform does
         not do.
